@@ -1,0 +1,27 @@
+name: Update data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  update_mountrarities:
+    name: Update MountsRarity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Update MountsRarity.lua
+        run: ./update-rarities.sh
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: "Update mounts rarities"
+          committer: "GitHub Actions <sgade@users.noreply.github.com>"
+          title: "[Automated] Update mount rarities"
+          assignees: sgade
+          reviewers: sgade
+          branch: update-mountsrarity
+          delete-branch: true
