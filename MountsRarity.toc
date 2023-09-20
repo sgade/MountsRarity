@@ -3,5 +3,7 @@
 ## Notes: Provides rarity data of mounts among the playerbase
 ## Author: Kiaro-Frostwolf
 ## Version: @project-version@
+## X-Website: https://github.com/sgade/MountsRarity
+## X-Category: Library
 
 MountsRarity.lua
