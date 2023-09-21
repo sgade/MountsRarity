@@ -26,8 +26,8 @@ MOUNTSRARITY_RESPONSE=$(get "$MOUNTSRARITY_SOURCE")
 MOUNTSRARITY=$(echo "$MOUNTSRARITY_RESPONSE" | jq '.mounts | to_entries')
 echo "Downloaded $(echo "$MOUNTSRARITY" | jq 'length') mounts."
 
-echo "-- AUTOMATICALLY GENERATED. MODIFICATION WILL BE OVERWRITTEN" > $MOUNTS_FILE
 {
+    echo "-- AUTOMATICALLY GENERATED. MODIFICATION WILL BE OVERWRITTEN"
     echo "-- Source: https://www.dataforazeroth.com/collections/mounts"
     echo ""
     echo "local _, namespace = ..."
@@ -35,6 +35,6 @@ echo "-- AUTOMATICALLY GENERATED. MODIFICATION WILL BE OVERWRITTEN" > $MOUNTS_FI
     echo "namespace.data = {"
     echo "$MOUNTSRARITY" | jq -r '.[] | "  [" + .key + "] = " + ( .value | tostring ) + ","'
     echo "}"
-} >> $MOUNTS_FILE
+} > $MOUNTS_FILE
 
 echo "$MOUNTS_FILE written."

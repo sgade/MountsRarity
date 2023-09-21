@@ -8,5 +8,6 @@
 
 Libs\LibStub\LibStub.lua
 
+Version.lua
 Data.lua
 MountsRarity.lua

@@ -7,21 +7,43 @@ on:
 
 jobs:
   update_mountrarities:
-    name: Update MountsRarity
+    name: Update Data.lua
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Update MountsRarity.lua
-        run: ./update-rarities.sh
-
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v5
+      - uses: actions/checkout@v4
         with:
-          commit-message: "Update mounts rarities"
-          committer: "GitHub Actions <sgade@users.noreply.github.com>"
-          title: "[Automated] Update mount rarities"
-          assignees: sgade
-          reviewers: sgade
-          branch: update-mountsrarity
-          delete-branch: true
+          token: ${{ secrets.PUSH_TOKEN }}
+          fetch-tags: true
+
+      - name: Update rarities
+        run: ./scripts/update-rarities.sh
+
+      - name: Verify Data.lua was updated
+        id: verify-changes
+        uses: tj-actions/verify-changed-files@v16
+        with:
+          files: |
+            Data.lua
+
+      - name: Set minor version
+        if: steps.verify-changes.outputs.files_changed == 'true'
+        run: |
+          NEXT_MINOR=$GITHUB_RUN_NUMBER
+          ./scripts/set-minor-version.sh $NEXT_MINOR
+
+      - name: Define release tag
+        if: steps.verify-changes.outputs.files_changed == 'true'
+        id: define-release-tag
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_prefix: ""
+          dry_run: true
+
+      - name: Commit version change
+        if: steps.verify-changes.outputs.files_changed == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Update rarity data"
+          tagging_message: ${{ steps.define-release-tag.outputs.new_tag }}
