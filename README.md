@@ -4,20 +4,14 @@ World of Warcraft addon that provides rarity data of mounts among the playerbase
 
 ## Accessing the data
 
-Mount data can be accessed in other addons using the global `MountsRarityAddon.MountsRarity`.
-It is a table with the key being the mountID (type `string`) and the percentage of players owning that mount (type `number`) from `0` to `100`.
+Mount data can be accessed in other addons as a `LibStub` library.
+Use the functions `GetData()` and `GetRarityByID(mountID)` to get to the actual rarity data. The rarity is defined as a number from `0` (no player has it) to `100` (every player has it).
 
 Example:
 
 ```lua
-MountsRarityAddon.MountsRarity = {
-  ["6"] = 64.29413294823611,
-  ["9"] = 67.45575717348211,
-  ["11"] = 66.22915676267188,
-  ["14"] = 66.21875196211218,
-  ["17"] = 0.59227533254999,
-  ...
-}
+local MountsRarity = LibStub("MountsRarity-2.0")
+local rarity = MountsRarity:GetRarityByID(6)
 ```
 
 ## Data source

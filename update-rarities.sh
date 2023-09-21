@@ -6,7 +6,7 @@
 
 set -eu
 
-MOUNTS_FILE="MountsRarity.lua"
+MOUNTS_FILE="Data.lua"
 
 function get() {
     curl "$1" \
@@ -28,12 +28,12 @@ echo "Downloaded $(echo "$MOUNTSRARITY" | jq 'length') mounts."
 
 echo "-- AUTOMATICALLY GENERATED. MODIFICATION WILL BE OVERWRITTEN" > $MOUNTS_FILE
 {
-    echo "-- Source: ${MOUNTSRARITY_SOURCE}"
+    echo "-- Source: https://www.dataforazeroth.com/collections/mounts"
     echo ""
-    echo "MountsRarityAddon = {}"
+    echo "local _, namespace = ..."
     echo ""
-    echo "MountsRarityAddon.MountsRarity = {"
-    echo "$MOUNTSRARITY" | jq -r '.[] | "  [\"" + .key + "\"] = " + ( .value | tostring ) + ","' >> $MOUNTS_FILE
+    echo "namespace.data = {"
+    echo "$MOUNTSRARITY" | jq -r '.[] | "  [" + .key + "] = " + ( .value | tostring ) + ","'
     echo "}"
 } >> $MOUNTS_FILE
 
