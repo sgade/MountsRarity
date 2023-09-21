@@ -6,8 +6,4 @@
 ## X-Website: https://github.com/sgade/MountsRarity
 ## X-Category: Library
 
-Libs\LibStub\LibStub.lua
-
-Version.lua
-Data.lua
-MountsRarity.lua
+embeds.xml
