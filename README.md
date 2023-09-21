@@ -1,6 +1,6 @@
 # MountsRarity
 
-World of Warcraft addon that provides rarity data of mounts among the playerbase.
+Provides rarity data for mounts among the playerbase.
 
 ## Accessing the data
 
