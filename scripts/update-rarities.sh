@@ -1,8 +1,10 @@
 #!/bin/bash
 #
-# update-rarities.sh
+#  MountsRarity/scripts/update-rarities.sh
 #
-# Copyright (c) 2023 Sören Gade
+#  Copyright (c) 2023 Sören Gade
+#  For the full license, see the LICENSE file.
+#
 
 set -eu
 
