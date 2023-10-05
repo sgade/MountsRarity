@@ -2,4 +2,4 @@
 
 local _, namespace = ...
 
-namespace.VERSION_MINOR = 37
+namespace.VERSION_MINOR = 41
