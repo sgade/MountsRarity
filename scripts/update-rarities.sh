@@ -8,7 +8,7 @@
 
 set -eu
 
-MOUNTS_FILE="Data.lua"
+MOUNTS_FILE="MountsRarity.lua"
 
 function get() {
     curl "$1" \
@@ -28,15 +28,11 @@ MOUNTSRARITY_RESPONSE=$(get "$MOUNTSRARITY_SOURCE")
 MOUNTSRARITY=$(echo "$MOUNTSRARITY_RESPONSE" | jq '.mounts | to_entries')
 echo "Downloaded $(echo "$MOUNTSRARITY" | jq 'length') mounts."
 
+sed -i '/Everything after this line/q' $MOUNTS_FILE
 {
-    echo "-- AUTOMATICALLY GENERATED. MODIFICATION WILL BE OVERWRITTEN"
-    echo "-- Source: https://www.dataforazeroth.com/collections/mounts"
-    echo ""
-    echo "local _, namespace = ..."
-    echo ""
-    echo "namespace.data = {"
+    echo "lazyLoadData = function() return {"
     echo "$MOUNTSRARITY" | jq -r '.[] | "  [" + .key + "] = " + ( .value | tostring ) + ","'
-    echo "}"
-} > $MOUNTS_FILE
+    echo "} end"
+} >> $MOUNTS_FILE
 
 echo "$MOUNTS_FILE written."

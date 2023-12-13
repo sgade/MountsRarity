@@ -24,13 +24,13 @@ jobs:
         uses: tj-actions/verify-changed-files@v16
         with:
           files: |
-            Data.lua
+            MountsRarity.lua
 
       - name: Set minor version
         if: steps.verify-changes.outputs.files_changed == 'true'
         run: |
           NEXT_MINOR=$GITHUB_RUN_NUMBER
-          ./scripts/set-minor-version.sh $NEXT_MINOR
+          sed -i "s/MINOR[[:space:]]*=[[:space:]]*[[:digit:]]\+/MINOR = $NEXT_MINOR/" MountsRarity.lua
 
       - name: Define release tag
         if: steps.verify-changes.outputs.files_changed == 'true'
