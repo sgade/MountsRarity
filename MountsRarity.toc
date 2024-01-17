@@ -1,4 +1,4 @@
-## Interface: 100200
+## Interface: 100205
 ## Title: MountsRarity
 ## Notes: Provides rarity data of mounts among the playerbase
 ## Author: Kiaro-Frostwolf
