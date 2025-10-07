@@ -34,6 +34,9 @@ local data
 function MountsRarity:GetData()
   if not data then
     data = lazyLoadData()
+    --@debug@
+    print("MountsRarity: Loaded.")
+    --@end-debug@
   end
 
   ---@type table<number, number|nil>
