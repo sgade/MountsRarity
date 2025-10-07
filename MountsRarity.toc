@@ -3,6 +3,7 @@
 ## Notes: Provides rarity data of mounts among the playerbase
 ## Author: Kiaro-Frostwolf
 ## Version: @project-version@
+## IconTexture: Interface/AddOns/MountsRarity/MountsRarity.jpeg
 ## X-Website: https://github.com/sgade/MountsRarity
 ## X-Category: Library
 ## X-Curse-Project-ID: 918022
