@@ -21,4 +21,4 @@
 
 embeds.xml
 
-MountsRarity.lua
+MountsRarity-2.0.xml
