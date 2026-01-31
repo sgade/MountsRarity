@@ -4,7 +4,7 @@
 
 A World of Warcraft addon library that provides rarity data for mounts among the playerbase.
 
-## For players
+## 🎯 For players
 
 Download this library addon to provide the most current database. Your addons that use this library will pick it up automatically.
 
@@ -15,29 +15,47 @@ Internally, only the newest version of this library will be loaded and used for 
 - [MountJournalEnhanced](https://github.com/exochron/MountJournalEnhanced)
 - [LiteMount](https://github.com/xod-wow/LiteMount)
 
-## For addon developers
+## 🧑‍💻 For addon developers
 
 This library can be included with the deployment of your addon.
+I recommend you regularly update the version that you ship with your addon as the data is updated multiple times per week.
 
-Interally, only the most recent version will be loaded, regardless of where it is provided from.
 Players can opt into installing this addon separately to have a more recent version available as well.
+Interally, only the most recent version will be loaded, regardless of where it is provided from.
 
-### Accessing the data
+Mount rarities are floating point values between `0` (no player has it) and `100` (every player has it).
 
-Mount data can be accessed as a [LibStub](https://github.com/lua-wow/LibStub/) library.
-Use the functions `GetData()` and `GetRarityByID(mountID)` to get to the actual rarity data. The rarity is defined as a number from `0` (no player has it) to `100` (every player has it).
+### Loading the library
 
-Example:
+To load the library, or access an already initialized instance of it, load it as a [LibStub](https://github.com/lua-wow/LibStub/) library.
 
 ```lua
 local MountsRarity = LibStub("MountsRarity-2.0")
-local rarity = MountsRarity:GetRarityByID(6)
 ```
 
-## Data source
+### Get rarity by mount id
+
+To get the rarity value of a mount, call `GetRarityById(mountID)`.
+
+```lua
+local mountId = 6
+local rarity = MountsRarity:GetRarityByID(mountId)
+```
+
+### Get all rarity data
+
+To get the entire dataset, organized by mount id and its rarity, call `GetData()`.
+
+```lua
+local data = MountsRarity:GetData()
+```
+
+## 📊 Data source
 
 The data source for the rarity data is [Data for Azeroth](https://www.dataforazeroth.com/collections/mounts).
 
-## Issues
+Each day, there is a check for new data that publishes a new version with updated rarity values. This happens effectively twice a week.
+
+## ⚙️ Issues
 
 If you find any issues with this project, feel free to raise them [here](https://github.com/sgade/MountsRarity/issues).
