@@ -1,6 +1,8 @@
-# MountsRarity
+# 🐴 MountsRarity
 
-Provides rarity data for mounts among the playerbase.
+[![GitHub Release](https://img.shields.io/github/v/release/sgade/MountsRarity?sort=semver&display_name=release&style=for-the-badge&logo=github&color=rgb(20%2C4%2C120))](https://github.com/sgade/MountsRarity/releases) [![CurseForge Game Versions](https://img.shields.io/curseforge/game-versions/918022?style=for-the-badge&logo=battledotnet)](https://www.curseforge.com/wow/addons/mountsrarity) [![CurseForge Downloads](https://img.shields.io/curseforge/dt/918022?style=for-the-badge&logo=curseforge&color=rgb(206%2C109%2C59))](https://www.curseforge.com/wow/addons/mountsrarity)
+
+A World of Warcraft addon library that provides rarity data for mounts among the playerbase.
 
 ## For players
 
