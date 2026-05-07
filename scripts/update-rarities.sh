@@ -6,7 +6,7 @@
 #  For the full license, see the LICENSE file.
 #
 
-set -eu
+set -euo pipefail
 
 MOUNTS_FILE="MountsRarity.lua"
 
@@ -19,7 +19,7 @@ function get() {
 }
 
 echo "Downloading version information..."
-VERSION_RESPONSE=$(get 'https://api.dataforazeroth.com/version')
+VERSION_RESPONSE=$(get 'https://dataforazeroth.com/dynamic/index.json')
 
 echo "Downloading mountsrarity information..."
 MOUNTSRARITY_SOURCE="https://www.dataforazeroth.com$(echo "$VERSION_RESPONSE" | jq .mountsrarity | tr -d '"')"
