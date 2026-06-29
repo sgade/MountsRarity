@@ -1,0 +1,26 @@
+name: Update interface version
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * 2'
+
+permissions:
+  contents: write
+
+jobs:
+  update_interface_version:
+    name: Update TOC interface version
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update interface version
+        run: ./scripts/update-interface-version.sh
+
+      - name: Commit interface version change
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Update interface version"
+          file_pattern: MountsRarity.toc

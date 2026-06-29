@@ -56,6 +56,25 @@ The data source for the rarity data is [Data for Azeroth](https://www.dataforaze
 
 Each day, there is a check for new data that publishes a new version with updated rarity values. This happens effectively twice a week.
 
+## ⚙️ Maintenance
+
+The addon interface version in `MountsRarity.toc` is updated from Blizzard's patch CDN.
+The updater reads the retail mainline product and the retail PTR/beta product, then writes both interface versions when they differ.
+
+Run the updater locally:
+
+```bash
+./scripts/update-interface-version.sh
+```
+
+Verify that the TOC is already current without writing changes:
+
+```bash
+./scripts/update-interface-version.sh --check
+```
+
+GitHub Actions runs the same updater every Tuesday and commits `MountsRarity.toc` when Blizzard has published a new interface version.
+
 ## ⚙️ Issues
 
 If you find any issues with this project, feel free to raise them [here](https://github.com/sgade/MountsRarity/issues).
