@@ -3,7 +3,7 @@ name: Update interface version
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 8 * * 2'
+    - cron: '23 18 * * 2'
 
 permissions:
   contents: write
