@@ -22,5 +22,5 @@ jobs:
       - name: Commit interface version change
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Update interface version"
+          commit_message: "chore(toc): update interface version"
           file_pattern: MountsRarity.toc
