@@ -25,14 +25,15 @@ echo "Downloading mountsrarity information..."
 MOUNTSRARITY_SOURCE="https://www.dataforazeroth.com$(echo "$VERSION_RESPONSE" | jq .mountsrarity | tr -d '"')"
 MOUNTSRARITY_RESPONSE=$(get "$MOUNTSRARITY_SOURCE")
 
-MOUNTSRARITY=$(echo "$MOUNTSRARITY_RESPONSE" | jq '.mounts | to_entries')
+MOUNTSRARITY=$(echo "$MOUNTSRARITY_RESPONSE" | jq '.mounts | to_entries | sort_by(.key | tonumber)')
 echo "Downloaded $(echo "$MOUNTSRARITY" | jq 'length') mounts."
 
-sed -i '/Everything after this line/q' $MOUNTS_FILE
+RAW_DATA=$(echo "$MOUNTSRARITY" | jq -r '[.[] | "\(.key):\(.value)"] | join(";")')
+
+sed -i.bak '/Everything after this line/q' "$MOUNTS_FILE"
+rm -f "$MOUNTS_FILE.bak"
 {
-    echo "lazyLoadData = function() return {"
-    echo "$MOUNTSRARITY" | jq -r '.[] | "  [" + .key + "] = " + ( .value | tostring ) + ","'
-    echo "} end"
-} >> $MOUNTS_FILE
+    echo "rawData = \"$RAW_DATA\""
+} >> "$MOUNTS_FILE"
 
 echo "$MOUNTS_FILE written."
