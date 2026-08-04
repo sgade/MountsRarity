@@ -33,9 +33,20 @@ local data
 
 function MountsRarity:GetData()
   if not data then
-    data = lazyLoadData()
     --@debug@
-    print("MountsRarity: Loaded.")
+    local debugParseStartTime = debugprofilestop()
+    local debugMemBefore = collectgarbage("count")
+    --@end-debug@
+    data = lazyLoadData()
+
+    --@debug@
+    local debugCount = 0
+    for _ in pairs(data) do
+      debugCount = debugCount + 1
+    end
+    local debugMemAfter = collectgarbage("count")
+    print(("MountsRarity: Parsed %d entries in %.3fms (%.1fKB -> %.1fKB, +%.1fKB)"):format(
+    debugCount, debugprofilestop() - debugParseStartTime, debugMemBefore, debugMemAfter, debugMemAfter - debugMemBefore))
     --@end-debug@
   end
 
