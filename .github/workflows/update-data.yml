@@ -29,7 +29,7 @@ jobs:
       - name: Set minor version
         if: steps.verify-changes.outputs.files_changed == 'true'
         run: |
-          NEXT_MINOR=$GITHUB_RUN_NUMBER
+          NEXT_MINOR=$(date -u +%Y%m%d%H%M)
           sed -i "s/MINOR[[:space:]]*=[[:space:]]*[[:digit:]]\+/MINOR = $NEXT_MINOR/" MountsRarity.lua
 
       - name: Define release tag

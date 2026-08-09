@@ -20,7 +20,8 @@
 
 ----------------------------------------------------------------------------]]--
 
--- This build version gets automatically updated.
+-- This build version gets automatically updated to the current UTC date and time (YYYYMMDDHHMM).
+-- Using a timestamp instead of e.g. a CI run number keeps this reproducible across forks and git hosts.
 local MINOR = 1082
 ---@class MountsRarity: { GetData: function, GetRarityByID: function }
 local MountsRarity = LibStub:NewLibrary("MountsRarity-2.0", MINOR)
