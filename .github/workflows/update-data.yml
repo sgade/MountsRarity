@@ -16,6 +16,9 @@ jobs:
           token: ${{ secrets.PUSH_TOKEN }}
           fetch-tags: true
 
+      - name: Install Lua
+        run: sudo apt-get update && sudo apt-get install -y lua5.1
+
       - name: Update rarities
         run: ./scripts/update-rarities.sh
 
