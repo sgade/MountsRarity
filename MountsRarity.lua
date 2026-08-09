@@ -21,15 +21,14 @@
 ----------------------------------------------------------------------------]]--
 
 -- This build version gets automatically updated to the current UTC date and time (YYYYMMDDHHMM).
--- Using a timestamp instead of e.g. a CI run number keeps this reproducible across forks and git hosts.
-local MINOR = 1082
+local MINOR = 202608090233
 ---@class MountsRarity: { GetData: function, GetRarityByID: function }
 local MountsRarity = LibStub:NewLibrary("MountsRarity-2.0", MINOR)
 if not MountsRarity then return end -- already loaded and no upgrade necessary
 
 -- The UTC time this data was last generated, as a Unix timestamp (seconds since epoch).
 -- Gets automatically updated alongside MINOR whenever the data changes.
-local LAST_UPDATED = 1786309688
+local LAST_UPDATED = 1786242798
 
 local lazyLoadData = function()
   return {}
