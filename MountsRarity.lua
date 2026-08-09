@@ -20,9 +20,12 @@
 
 ----------------------------------------------------------------------------]]--
 
+---@alias MountsRarity.RarityData table<number, number> Mount ID to rarity percentage (0-100) mapping.
+
 -- This build version gets automatically updated to the current UTC date and time (YYYYMMDDHHMM).
+-- Using a timestamp instead of e.g. a CI run number keeps this reproducible across forks and git hosts.
 local MINOR = 202608090233
----@class MountsRarity: { GetData: function, GetRarityByID: function }
+---@class MountsRarity
 local MountsRarity = LibStub:NewLibrary("MountsRarity-2.0", MINOR)
 if not MountsRarity then return end -- already loaded and no upgrade necessary
 
@@ -30,11 +33,15 @@ if not MountsRarity then return end -- already loaded and no upgrade necessary
 -- Gets automatically updated alongside MINOR whenever the data changes.
 local LAST_UPDATED = 1786242798
 
+---@type fun(): MountsRarity.RarityData
 local lazyLoadData = function()
   return {}
 end
+---@type MountsRarity.RarityData?
 local data
 
+---Returns the rarity data, organized by mount ID. Lazily parses the data on first call.
+---@return MountsRarity.RarityData data
 function MountsRarity:GetData()
   if not data then
     --@debug@
@@ -54,12 +61,12 @@ function MountsRarity:GetData()
     --@end-debug@
   end
 
-  ---@type table<number, number|nil>
   return data
 end
 
----Returns the rarity of a mount (0-100) by ID, or `nil`.
+---Returns the rarity of a mount (0-100) by ID, or `nil` if this mount is not tracked.
 ---@param mountID number The mount ID.
+---@return number|nil rarity The rarity percentage (0-100), or `nil` if unknown.
 function MountsRarity:GetRarityByID(mountID)
   return self:GetData()[mountID]
 end
@@ -67,6 +74,7 @@ end
 ---Returns the UTC time this library's data was last generated, as a Unix timestamp
 ---(seconds since epoch). Pass it to `date()` for formatting, or compare it against
 ---`time()` to derive a relative age.
+---@return number timestamp Unix timestamp (seconds since epoch, UTC).
 function MountsRarity:GetLastUpdated()
   return LAST_UPDATED
 end
