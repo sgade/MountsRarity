@@ -26,11 +26,13 @@ jobs:
           files: |
             MountsRarity.lua
 
-      - name: Set minor version
+      - name: Set minor version and last-updated timestamp
         if: steps.verify-changes.outputs.files_changed == 'true'
         run: |
-          NEXT_MINOR=$(date -u +%Y%m%d%H%M)
+          NOW_EPOCH=$(date -u +%s)
+          NEXT_MINOR=$(date -u -d "@$NOW_EPOCH" +%Y%m%d%H%M)
           sed -i "s/MINOR[[:space:]]*=[[:space:]]*[[:digit:]]\+/MINOR = $NEXT_MINOR/" MountsRarity.lua
+          sed -i "s/LAST_UPDATED[[:space:]]*=[[:space:]]*[[:digit:]]\+/LAST_UPDATED = $NOW_EPOCH/" MountsRarity.lua
 
       - name: Define release tag
         if: steps.verify-changes.outputs.files_changed == 'true'

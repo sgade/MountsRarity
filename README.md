@@ -50,6 +50,15 @@ To get the entire dataset, organized by mount id and its rarity, call `GetData()
 local data = MountsRarity:GetData()
 ```
 
+### Get the data's age
+
+To find out when the shipped rarity data was last generated, call `GetLastUpdated()`. It returns a Unix timestamp (seconds since epoch, UTC), so you can format it yourself (e.g. with `date()`) or compare it against `time()` to show a relative age.
+
+```lua
+local lastUpdated = MountsRarity:GetLastUpdated()
+print(date("%Y-%m-%d", lastUpdated))
+```
+
 ## 📊 Data source
 
 The data source for the rarity data is [Data for Azeroth](https://www.dataforazeroth.com/collections/mounts).
