@@ -20,11 +20,15 @@
 
 ----------------------------------------------------------------------------]]--
 
--- This build version gets automatically updated.
-local MINOR = 1082
+-- This build version gets automatically updated to the current UTC date and time (YYYYMMDDHHMM).
+local MINOR = 202608090233
 ---@class MountsRarity: { GetData: function, GetRarityByID: function }
 local MountsRarity = LibStub:NewLibrary("MountsRarity-2.0", MINOR)
 if not MountsRarity then return end -- already loaded and no upgrade necessary
+
+-- The UTC time this data was last generated, as a Unix timestamp (seconds since epoch).
+-- Gets automatically updated alongside MINOR whenever the data changes.
+local LAST_UPDATED = 1786242798
 
 local lazyLoadData = function()
   return {}
@@ -58,6 +62,13 @@ end
 ---@param mountID number The mount ID.
 function MountsRarity:GetRarityByID(mountID)
   return self:GetData()[mountID]
+end
+
+---Returns the UTC time this library's data was last generated, as a Unix timestamp
+---(seconds since epoch). Pass it to `date()` for formatting, or compare it against
+---`time()` to derive a relative age.
+function MountsRarity:GetLastUpdated()
+  return LAST_UPDATED
 end
 
 -- Everything after this line gets automatically replaced and updated.
