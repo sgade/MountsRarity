@@ -24,7 +24,7 @@ jobs:
 
       - name: Verify Data.lua was updated
         id: verify-changes
-        uses: tj-actions/verify-changed-files@v16
+        uses: tj-actions/verify-changed-files@v20
         with:
           files: |
             MountsRarity.lua
