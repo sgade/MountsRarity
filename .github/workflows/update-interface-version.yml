@@ -20,7 +20,7 @@ jobs:
         run: ./scripts/update-interface-version.sh
 
       - name: Commit interface version change
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore(toc): update interface version"
           file_pattern: MountsRarity.toc

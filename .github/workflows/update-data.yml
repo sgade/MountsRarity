@@ -48,7 +48,7 @@ jobs:
 
       - name: Commit version change
         if: steps.verify-changes.outputs.files_changed == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore(data): update rarity data"
           tagging_message: ${{ steps.define-release-tag.outputs.new_tag }}
