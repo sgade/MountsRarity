@@ -10,9 +10,8 @@ set -euo pipefail
 
 TOC_FILE="${TOC_FILE:-MountsRarity.toc}"
 PATCH_ENDPOINT_BASE_URL="${PATCH_ENDPOINT_BASE_URL:-http://us.patch.battle.net:1119}"
-MAINLINE_PRODUCT="${MAINLINE_PRODUCT:-wow}"
-MAINLINE_TEST_PRODUCT="${MAINLINE_TEST_PRODUCT:-wowt}"
-REGION="${REGION:-us}"
+LIVE_PRODUCT="${LIVE_PRODUCT:-wow}"
+TEST_PRODUCTS="${TEST_PRODUCTS:-wowt wowxptr wow_beta}"
 CHECK_ONLY=false
 
 function usage() {
@@ -24,9 +23,9 @@ Updates the WoW Interface metadata in ${TOC_FILE}.
 Environment overrides:
   TOC_FILE                    TOC file to update. Default: MountsRarity.toc
   PATCH_ENDPOINT_BASE_URL     Blizzard CDN base URL. Default: http://us.patch.battle.net:1119
-  MAINLINE_PRODUCT            Retail mainline product slug. Default: wow
-  MAINLINE_TEST_PRODUCT       Retail PTR/beta product slug. Default: wowt
-  REGION                      Region row to read from versions files. Default: us
+  LIVE_PRODUCT                Retail live product slug, used as the version floor. Default: wow
+  TEST_PRODUCTS               Space-separated public test/beta product slugs to poll.
+                               Default: "wowt wowxptr wow_beta"
 
 Options:
   --check                     Verify the TOC is already current without writing it.
@@ -51,12 +50,16 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-function get_product_version() {
+function get_product_versions() {
     local product="$1"
     local endpoint="${PATCH_ENDPOINT_BASE_URL}/${product}/versions"
+    local response
 
-    curl --fail --silent --show-error --location "$endpoint" \
-        | awk -F'|' -v region="$REGION" '$1 == region { print $6; exit }'
+    if ! response="$(curl --fail --silent --show-error --location "$endpoint" 2>/dev/null)"; then
+        return 1
+    fi
+
+    echo "$response" | awk -F'|' 'NF >= 6 && $1 !~ /^Region/ && $1 !~ /^##/ { print $6 }' | sort -u
 }
 
 function interface_version_from_product_version() {
@@ -74,18 +77,16 @@ function interface_version_from_product_version() {
     printf "%d%02d%02d" "$major" "$minor" "$patch"
 }
 
-function require_version() {
+function require_versions() {
     local product="$1"
-    local version
+    local versions
 
-    version="$(get_product_version "$product")"
-
-    if [[ -z "$version" ]]; then
-        echo "Could not find region '${REGION}' in Blizzard versions for product '${product}'." >&2
+    if ! versions="$(get_product_versions "$product")" || [[ -z "$versions" ]]; then
+        echo "Could not find any versions in Blizzard versions for product '${product}'." >&2
         exit 1
     fi
 
-    echo "$version"
+    echo "$versions"
 }
 
 function add_unique_interface_version() {
@@ -127,22 +128,44 @@ if [[ ! -f "$TOC_FILE" ]]; then
     exit 1
 fi
 
-echo "Downloading Blizzard versions for ${MAINLINE_PRODUCT} and ${MAINLINE_TEST_PRODUCT}..."
+echo "Determining live interface version floor from '${LIVE_PRODUCT}'..."
 
-MAINLINE_VERSION="$(require_version "$MAINLINE_PRODUCT")"
-MAINLINE_INTERFACE_VERSION="$(interface_version_from_product_version "$MAINLINE_VERSION")"
+LIVE_VERSIONS="$(require_versions "$LIVE_PRODUCT")"
+LIVE_FLOOR=0
+while IFS= read -r version; do
+    [[ -z "$version" ]] && continue
+    interface_version="$(interface_version_from_product_version "$version")"
+    if (( 10#$interface_version > 10#$LIVE_FLOOR )); then
+        LIVE_FLOOR="$interface_version"
+    fi
+done <<< "$LIVE_VERSIONS"
 
-MAINLINE_TEST_VERSION="$(require_version "$MAINLINE_TEST_PRODUCT")"
-MAINLINE_TEST_INTERFACE_VERSION="$(interface_version_from_product_version "$MAINLINE_TEST_VERSION")"
+echo "Live interface version floor: ${LIVE_FLOOR}"
 
 INTERFACE_VERSIONS=()
-add_unique_interface_version "$MAINLINE_INTERFACE_VERSION"
-add_unique_interface_version "$MAINLINE_TEST_INTERFACE_VERSION"
+
+for product in "$LIVE_PRODUCT" $TEST_PRODUCTS; do
+    if ! versions="$(get_product_versions "$product")" || [[ -z "$versions" ]]; then
+        echo "Skipping product '${product}': no versions reported." >&2
+        continue
+    fi
+
+    while IFS= read -r version; do
+        [[ -z "$version" ]] && continue
+        interface_version="$(interface_version_from_product_version "$version")"
+
+        if (( 10#$interface_version < 10#$LIVE_FLOOR )); then
+            echo "${product}: ${version} -> ${interface_version} (below live ${LIVE_FLOOR}, discarded)"
+            continue
+        fi
+
+        echo "${product}: ${version} -> ${interface_version}"
+        add_unique_interface_version "$interface_version"
+    done <<< "$versions"
+done
 
 INTERFACE_LINE="## Interface: $(join_interface_versions "${INTERFACE_VERSIONS[@]}")"
 
-echo "${MAINLINE_PRODUCT}: ${MAINLINE_VERSION} -> ${MAINLINE_INTERFACE_VERSION}"
-echo "${MAINLINE_TEST_PRODUCT}: ${MAINLINE_TEST_VERSION} -> ${MAINLINE_TEST_INTERFACE_VERSION}"
 echo "Expected ${TOC_FILE}: ${INTERFACE_LINE}"
 
 if [[ "$(current_interface_line)" == "$INTERFACE_LINE" ]]; then
