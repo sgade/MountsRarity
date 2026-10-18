@@ -14,6 +14,9 @@ Internally, only the newest version of this library will be loaded and used for 
 
 - [MountJournalEnhanced](https://github.com/exochron/MountJournalEnhanced)
 - [LiteMount](https://github.com/xod-wow/LiteMount)
+- [Exquisite](https://www.curseforge.com/wow/addons/exquisite)
+- [Master Mounts](https://www.curseforge.com/wow/addons/master-mounts-world-tour)
+- ... yours?
 
 ## 🧑‍💻 For addon developers
 
