@@ -30,7 +30,7 @@ function fail() {
 }
 
 echo "Downloading version information..."
-VERSION_RESPONSE=$(get 'https://dataforazeroth.com/dynamic/index.json')
+VERSION_RESPONSE=$(get 'https://dataforazeroth.com/retail/dynamic/index.json')
 
 echo "$VERSION_RESPONSE" | jq -e '(.mountsrarity | type) == "string" and (.mountsrarity | length) > 0' > /dev/null \
     || fail "Unexpected version response: 'mountsrarity' is missing or not a non-empty string."
