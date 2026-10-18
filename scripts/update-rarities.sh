@@ -15,10 +15,13 @@ MIN_COUNT_RATIO=95
 
 function get() {
     curl "$1" \
-        -X 'GET' \
-        -H 'Accept: text/json; charset=iso-8859-1' \
+        -sS \
+        --fail-with-body \
+        --compressed \
+        --max-time 60 \
+        -H 'Accept: application/json' \
         -H 'Origin: https://www.dataforazeroth.com' \
-        -H 'User-Agent: MountsRarity'
+        -H 'User-Agent: MountsRarity (+https://github.com/sgade/MountsRarity)'
 }
 
 function fail() {
