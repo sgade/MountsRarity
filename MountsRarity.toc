@@ -1,4 +1,4 @@
-## Interface: 120105
+## Interface: 120105, 120107
 ## Title: MountsRarity
 ## Notes: Provides rarity data of mounts among the playerbase
 ## Author: Kiaro-Frostwolf
