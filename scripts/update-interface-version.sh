@@ -12,6 +12,8 @@ TOC_FILE="${TOC_FILE:-MountsRarity.toc}"
 PATCH_ENDPOINT_BASE_URL="${PATCH_ENDPOINT_BASE_URL:-http://us.patch.battle.net:1119}"
 LIVE_PRODUCT="${LIVE_PRODUCT:-wow}"
 TEST_PRODUCTS="${TEST_PRODUCTS:-wowt wowxptr wow_beta}"
+FOREVER_LIVE_PRODUCT="${FOREVER_LIVE_PRODUCT:-wowf}"
+FOREVER_TEST_PRODUCTS="${FOREVER_TEST_PRODUCTS:-}"
 CHECK_ONLY=false
 
 function usage() {
@@ -26,6 +28,9 @@ Environment overrides:
   LIVE_PRODUCT                Retail live product slug, used as the version floor. Default: wow
   TEST_PRODUCTS               Space-separated public test/beta product slugs to poll.
                                Default: "wowt wowxptr wow_beta"
+  FOREVER_LIVE_PRODUCT        Forever live product slug, used as the version floor. Default: wowf
+  FOREVER_TEST_PRODUCTS       Space-separated public Forever test product slugs to poll.
+                               Default: none
 
 Options:
   --check                     Verify the TOC is already current without writing it.
@@ -128,41 +133,51 @@ if [[ ! -f "$TOC_FILE" ]]; then
     exit 1
 fi
 
-echo "Determining live interface version floor from '${LIVE_PRODUCT}'..."
+# Each game has its own version numbers, so each one needs its own floor.
+function collect_interface_versions() {
+    local live_product="$1"
+    local test_products="$2"
+    local live_versions live_floor version interface_version product versions
 
-LIVE_VERSIONS="$(require_versions "$LIVE_PRODUCT")"
-LIVE_FLOOR=0
-while IFS= read -r version; do
-    [[ -z "$version" ]] && continue
-    interface_version="$(interface_version_from_product_version "$version")"
-    if (( 10#$interface_version > 10#$LIVE_FLOOR )); then
-        LIVE_FLOOR="$interface_version"
-    fi
-done <<< "$LIVE_VERSIONS"
+    echo "Determining live interface version floor from '${live_product}'..."
 
-echo "Live interface version floor: ${LIVE_FLOOR}"
-
-INTERFACE_VERSIONS=()
-
-for product in "$LIVE_PRODUCT" $TEST_PRODUCTS; do
-    if ! versions="$(get_product_versions "$product")" || [[ -z "$versions" ]]; then
-        echo "Skipping product '${product}': no versions reported." >&2
-        continue
-    fi
-
+    live_versions="$(require_versions "$live_product")"
+    live_floor=0
     while IFS= read -r version; do
         [[ -z "$version" ]] && continue
         interface_version="$(interface_version_from_product_version "$version")"
+        if (( 10#$interface_version > 10#$live_floor )); then
+            live_floor="$interface_version"
+        fi
+    done <<< "$live_versions"
 
-        if (( 10#$interface_version < 10#$LIVE_FLOOR )); then
-            echo "${product}: ${version} -> ${interface_version} (below live ${LIVE_FLOOR}, discarded)"
+    echo "Live interface version floor: ${live_floor}"
+
+    for product in "$live_product" $test_products; do
+        if ! versions="$(get_product_versions "$product")" || [[ -z "$versions" ]]; then
+            echo "Skipping product '${product}': no versions reported." >&2
             continue
         fi
 
-        echo "${product}: ${version} -> ${interface_version}"
-        add_unique_interface_version "$interface_version"
-    done <<< "$versions"
-done
+        while IFS= read -r version; do
+            [[ -z "$version" ]] && continue
+            interface_version="$(interface_version_from_product_version "$version")"
+
+            if (( 10#$interface_version < 10#$live_floor )); then
+                echo "${product}: ${version} -> ${interface_version} (below live ${live_floor}, discarded)"
+                continue
+            fi
+
+            echo "${product}: ${version} -> ${interface_version}"
+            add_unique_interface_version "$interface_version"
+        done <<< "$versions"
+    done
+}
+
+INTERFACE_VERSIONS=()
+
+collect_interface_versions "$LIVE_PRODUCT" "$TEST_PRODUCTS"
+collect_interface_versions "$FOREVER_LIVE_PRODUCT" "$FOREVER_TEST_PRODUCTS"
 
 INTERFACE_LINE="## Interface: $(join_interface_versions "${INTERFACE_VERSIONS[@]}")"
 

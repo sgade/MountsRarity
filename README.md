@@ -8,6 +8,8 @@ A World of Warcraft addon library that provides rarity data for mounts among the
 
 Download this library addon to provide the most current database. Your addons that use this library will pick it up automatically.
 
+The addon supports World of Warcraft Retail and World of Warcraft: Forever. Each game client only uses its own data. Forever has no rarity data yet, because Data for Azeroth does not publish it.
+
 Internally, only the newest version of this library will be loaded and used for all addons.
 
 ### Addons using this library
@@ -28,6 +30,21 @@ Interally, only the most recent version will be loaded, regardless of where it i
 
 Mount rarities are floating point values between `0` (no player has it) and `100` (every player has it).
 
+### Including the library for Retail and Forever
+
+Each game client has its own file with the same functions. `MountsRarity.lua` has the Retail data and `MountsRarity_Forever.lua` has the Forever data.
+
+Load `MountsRarity-2.0.xml` to include both. To load only the file that the client needs, add these lines to the TOC file of your addon:
+
+```toc
+Libs\MountsRarity-2.0\MountsRarity.lua [AllowLoadGameType standard]
+Libs\MountsRarity-2.0\MountsRarity_Forever.lua [AllowLoadGameType camelot][ExcludeLoadGameType standard, classic]
+```
+
+A file that loads on a different client gives no data. If your addon supports Forever and loads only `MountsRarity.lua`, it gets no rarities on Forever.
+
+Update your included copy before you add Forever to your addon. Older copies do not check the client and give Retail data on Forever.
+
 ### Loading the library
 
 To load the library, or access an already initialized instance of it, load it as a [LibStub](https://github.com/lua-wow/LibStub/) library.
@@ -45,6 +62,8 @@ local mountId = 6
 local rarity = MountsRarity:GetRarityByID(mountId)
 ```
 
+The value is `nil` if the mount is not tracked or if there is no data for the current client.
+
 ### Get all rarity data
 
 To get the entire dataset, organized by mount id and its rarity, call `GetData()`.
@@ -53,9 +72,11 @@ To get the entire dataset, organized by mount id and its rarity, call `GetData()
 local data = MountsRarity:GetData()
 ```
 
+The table is empty if there is no data for the current client.
+
 ### Get the data's age
 
-To find out when the shipped rarity data was last generated, call `GetLastUpdated()`. It returns a Unix timestamp (seconds since epoch, UTC), so you can format it yourself (e.g. with `date()`) or compare it against `time()` to show a relative age.
+To find out when the shipped rarity data was last generated, call `GetLastUpdated()`. It returns a Unix timestamp (seconds since epoch, UTC), so you can format it yourself (e.g. with `date()`) or compare it against `time()` to show a relative age. It returns `nil` if there is no data for the current client.
 
 ```lua
 local lastUpdated = MountsRarity:GetLastUpdated()
@@ -68,10 +89,12 @@ The data source for the rarity data is [Data for Azeroth](https://www.dataforaze
 
 Each day, there is a check for new data that publishes a new version with updated rarity values. This happens effectively twice a week.
 
+The same check looks for Forever data. Data for Azeroth does not publish Forever rarity data yet. When it does, the check adds the data to `MountsRarity_Forever.lua`.
+
 ## ⚙️ Maintenance
 
 The addon interface version in `MountsRarity.toc` is updated from Blizzard's patch CDN.
-The updater reads the retail mainline product and the retail PTR/beta product, then writes both interface versions when they differ.
+The updater reads the retail mainline product, the retail PTR/beta product and the Forever product (`wowf`), then writes all different interface versions. Retail and Forever each have their own minimum version.
 
 Run the updater locally:
 
@@ -86,6 +109,18 @@ Verify that the TOC is already current without writing changes:
 ```
 
 GitHub Actions runs the same updater every Tuesday and commits `MountsRarity.toc` when Blizzard has published a new interface version.
+
+Update the rarity data of one client, or of all clients when you do not give an argument:
+
+```bash
+./scripts/update-rarities.sh [retail|forever]
+```
+
+Test that each client gets only its own data:
+
+```bash
+lua5.1 scripts/test-client-selection.lua
+```
 
 ## ⚙️ Issues
 
