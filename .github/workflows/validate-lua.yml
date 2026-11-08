@@ -27,3 +27,6 @@ jobs:
           done < <(git ls-files -z '*.lua')
 
           exit $exit_code
+
+      - name: Test client selection
+        run: lua5.1 scripts/test-client-selection.lua

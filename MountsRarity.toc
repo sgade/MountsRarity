@@ -1,4 +1,4 @@
-## Interface: 120105, 120107
+## Interface: 120105, 120107, 16001
 ## Title: MountsRarity
 ## Notes: Provides rarity data of mounts among the playerbase
 ## Author: Kiaro-Frostwolf
@@ -21,4 +21,5 @@
 
 embeds.xml
 
-MountsRarity-2.0.xml
+MountsRarity.lua [AllowLoadGameType standard]
+MountsRarity_Forever.lua [AllowLoadGameType camelot][ExcludeLoadGameType standard, classic]
