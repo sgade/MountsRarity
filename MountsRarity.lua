@@ -25,12 +25,16 @@
 -- This build version gets automatically updated to the current UTC date and time (YYYYMMDDHHMM).
 -- Using a timestamp instead of e.g. a CI run number keeps this reproducible across forks and git hosts.
 local MINOR = 202611080622
+-- This data is only valid for one game client. Host addons can load this file on any client,
+-- so it registers at version 0 on other clients. The library is then available without data,
+-- and the file for the current client always replaces it.
+local IS_MATCHING_CLIENT = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 ---@class MountsRarity
-local MountsRarity = LibStub:NewLibrary("MountsRarity-2.0", MINOR)
+local MountsRarity = LibStub:NewLibrary("MountsRarity-2.0", IS_MATCHING_CLIENT and MINOR or 0)
 if not MountsRarity then return end -- already loaded and no upgrade necessary
 
 -- The UTC time this data was last generated, as a Unix timestamp (seconds since epoch).
--- Gets automatically updated alongside MINOR whenever the data changes.
+-- Gets automatically updated whenever the data changes. 0 means that there is no data.
 local LAST_UPDATED = 1794118935
 
 ---@type fun(): MountsRarity.RarityData
@@ -48,7 +52,7 @@ function MountsRarity:GetData()
     local debugParseStartTime = debugprofilestop()
     local debugMemBefore = collectgarbage("count")
     --@end-debug@
-    data = lazyLoadData()
+    data = IS_MATCHING_CLIENT and lazyLoadData() or {}
 
     --@debug@
     local debugCount = 0
@@ -74,8 +78,12 @@ end
 ---Returns the UTC time this library's data was last generated, as a Unix timestamp
 ---(seconds since epoch). Pass it to `date()` for formatting, or compare it against
 ---`time()` to derive a relative age.
----@return number timestamp Unix timestamp (seconds since epoch, UTC).
+---@return number|nil timestamp Unix timestamp (seconds since epoch, UTC), or `nil` if there is no data for this client.
 function MountsRarity:GetLastUpdated()
+  if not IS_MATCHING_CLIENT or LAST_UPDATED == 0 then
+    return nil
+  end
+
   return LAST_UPDATED
 end
 

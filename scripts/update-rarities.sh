@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-MOUNTS_FILE="MountsRarity.lua"
+DATA_BASE_URL="${DATA_BASE_URL:-https://www.dataforazeroth.com}"
 # Refuse the update if the new mount count drops below this percentage of the previous count.
 # Guards against partial/broken upstream responses silently wiping out most of the data.
 MIN_COUNT_RATIO=95
@@ -29,14 +29,39 @@ function fail() {
     exit 1
 }
 
-echo "Downloading version information..."
-VERSION_RESPONSE=$(get 'https://dataforazeroth.com/retail/dynamic/index.json')
+CLIENT="${1:-all}"
+case "$CLIENT" in
+    all)
+        # Each client runs in its own process, so a Forever problem cannot stop or change the Retail update.
+        "$0" retail
+        "$0" forever || echo "::warning::Forever rarity data was not updated. Examine the log for the reason."
+        exit 0
+        ;;
+    retail)
+        MOUNTS_FILE="MountsRarity.lua"
+        ;;
+    forever)
+        MOUNTS_FILE="MountsRarity_Forever.lua"
+        ;;
+    *)
+        fail "Unknown client: $CLIENT (expected retail or forever)."
+        ;;
+esac
+
+echo "[$CLIENT] Downloading version information..."
+VERSION_RESPONSE=$(get "$DATA_BASE_URL/$CLIENT/dynamic/index.json")
+
+# Data for Azeroth does not publish rarity data for every client yet.
+if [[ "$CLIENT" != "retail" ]] && echo "$VERSION_RESPONSE" | jq -e 'has("mountsrarity") | not' > /dev/null; then
+    echo "[$CLIENT] Data for Azeroth does not publish 'mountsrarity'. $MOUNTS_FILE is unchanged."
+    exit 0
+fi
 
 echo "$VERSION_RESPONSE" | jq -e '(.mountsrarity | type) == "string" and (.mountsrarity | length) > 0' > /dev/null \
     || fail "Unexpected version response: 'mountsrarity' is missing or not a non-empty string."
 
-echo "Downloading mountsrarity information..."
-MOUNTSRARITY_SOURCE="https://www.dataforazeroth.com$(echo "$VERSION_RESPONSE" | jq -r '.mountsrarity')"
+echo "[$CLIENT] Downloading mountsrarity information..."
+MOUNTSRARITY_SOURCE="$DATA_BASE_URL$(echo "$VERSION_RESPONSE" | jq -r '.mountsrarity')"
 MOUNTSRARITY_RESPONSE=$(get "$MOUNTSRARITY_SOURCE")
 
 echo "$MOUNTSRARITY_RESPONSE" | jq -e '(.mounts | type) == "object"' > /dev/null \
@@ -60,6 +85,23 @@ if [[ "$INVALID_COUNT" -gt 0 ]]; then
     fail "Refusing to update: found $INVALID_COUNT invalid mount entries above (mount ID must be an integer, rarity must be a number between 0 and 100)."
 fi
 
+# Retail data at the wrong path must not reach this client: its mount IDs are partly the same.
+if [[ "$CLIENT" != "retail" ]]; then
+    echo "$VERSION_RESPONSE" | jq -e '(.mounts | type) == "string" and (.mounts | length) > 0' > /dev/null \
+        || fail "Unexpected version response: 'mounts' is missing or not a non-empty string."
+
+    CATALOG_RESPONSE=$(get "$DATA_BASE_URL$(echo "$VERSION_RESPONSE" | jq -r '.mounts')")
+    echo "$CATALOG_RESPONSE" | jq -e '(.mounts | type) == "array" and (.mounts | length) > 0' > /dev/null \
+        || fail "Unexpected mounts response: 'mounts' is missing or not a non-empty array."
+
+    UNKNOWN_IDS=$(comm -23 \
+        <(echo "$MOUNTSRARITY" | jq -r '.[].key' | LC_ALL=C sort -u) \
+        <(echo "$CATALOG_RESPONSE" | jq -r '.mounts[].id' | LC_ALL=C sort -u))
+    if [[ -n "$UNKNOWN_IDS" ]]; then
+        fail "Refusing to update: these mount IDs are not in the $CLIENT mount catalog: $(echo "$UNKNOWN_IDS" | tr '\n' ' ')"
+    fi
+fi
+
 NEW_COUNT=$(echo "$MOUNTSRARITY" | jq 'length')
 PREVIOUS_COUNT=$(grep -cE '^[[:space:]]*\[[0-9]+\] = ' "$MOUNTS_FILE" || true)
 echo "Downloaded $NEW_COUNT mounts (previously $PREVIOUS_COUNT)."
@@ -75,7 +117,8 @@ fi
 TMP_MOUNTS_FILE=$(mktemp)
 trap 'rm -f "$TMP_MOUNTS_FILE"' EXIT
 
-sed '/Everything after this line/q' "$MOUNTS_FILE" > "$TMP_MOUNTS_FILE"
+NOW_EPOCH=$(date -u +%s)
+sed -E -e "s/^(local LAST_UPDATED[[:space:]]*=[[:space:]]*)[0-9]+/\1$NOW_EPOCH/" -e '/Everything after this line/q' "$MOUNTS_FILE" > "$TMP_MOUNTS_FILE"
 {
     echo "lazyLoadData = function() return {"
     echo "$MOUNTSRARITY" | jq -r '.[] | "  [" + .key + "] = " + ( .value | tostring ) + ","'
@@ -104,6 +147,12 @@ elif [[ -n "$LUA_BIN" ]]; then
     "$LUA_BIN" -e "assert(loadfile('$TMP_MOUNTS_FILE'))" || fail "Refusing to update: $MOUNTS_FILE failed Lua syntax validation."
 else
     fail "Refusing to update: no Lua interpreter (luac/lua, any version) available to validate the generated $MOUNTS_FILE."
+fi
+
+# Only the data decides if the file changes. A new timestamp alone must not create a release.
+if cmp -s <(sed -n '/Everything after this line/,$p' "$MOUNTS_FILE") <(sed -n '/Everything after this line/,$p' "$TMP_MOUNTS_FILE"); then
+    echo "$MOUNTS_FILE is already current."
+    exit 0
 fi
 
 cat "$TMP_MOUNTS_FILE" > "$MOUNTS_FILE"
