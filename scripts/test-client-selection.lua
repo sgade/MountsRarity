@@ -51,7 +51,8 @@ local function setUpClient(project)
   _G.LibStub = nil
   _G.WOW_PROJECT_ID = project
   _G.WOW_PROJECT_MAINLINE = PROJECT_MAINLINE
-  _G.WOW_PROJECT_CAMELOT = PROJECT_CAMELOT
+  -- The game defines this constant only on the Forever client.
+  _G.WOW_PROJECT_CAMELOT = project == PROJECT_CAMELOT and PROJECT_CAMELOT or nil
   _G.strmatch = string.match
   _G.debugprofilestop = function() return 0 end
   _G.print = function(message) printed[#printed + 1] = message end
@@ -71,6 +72,27 @@ end
 
 local retail = { retailSource, RETAIL_FILE }
 local forever = { foreverSourceWithData, FOREVER_FILE }
+
+-- A copy of a file from a newer release, as a second host addon can include it.
+local function newer(entry)
+  local source = entry[1]:gsub("local MINOR = (%d+)", function(minor)
+    return ("local MINOR = %.0f"):format(tonumber(minor) + 1)
+  end)
+  return { source, entry[2] }
+end
+
+local function forEachPermutation(items, callback, count)
+  count = count or #items
+  if count <= 1 then
+    callback(items)
+    return
+  end
+  for i = 1, count do
+    items[i], items[count] = items[count], items[i]
+    forEachPermutation(items, callback, count - 1)
+    items[i], items[count] = items[count], items[i]
+  end
+end
 
 local function assertEqual(actual, expected, message)
   if actual ~= expected then
@@ -130,6 +152,22 @@ local tests = {
   ["forever client with only the Retail file gets no data"] = function()
     setUpClient(PROJECT_CAMELOT)
     assertNoData(loadInOrder({ retail }), "host")
+  end,
+  ["the load order of the files has no effect"] = function()
+    local expected = {
+      [PROJECT_MAINLINE] = assertRetail,
+      [PROJECT_CAMELOT] = assertForever,
+      [PROJECT_CLASSIC] = assertNoData,
+    }
+    for project, assertResult in pairs(expected) do
+      local orders = 0
+      forEachPermutation({ retail, forever, newer(retail), newer(forever) }, function(sources)
+        orders = orders + 1
+        setUpClient(project)
+        assertResult(loadInOrder(sources), ("project %d, order %d"):format(project, orders))
+      end)
+      assertEqual(orders, 24, "number of load orders")
+    end
   end,
   -- Host addons can include a copy that is not packaged. A message at load time would show to their users.
   ["no file prints a message when it loads"] = function()

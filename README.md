@@ -32,7 +32,13 @@ Mount rarities are floating point values between `0` (no player has it) and `100
 
 ### Including the library for Retail and Forever
 
-Each game client has its own file with the same functions. `MountsRarity.lua` has the Retail data and `MountsRarity_Forever.lua` has the Forever data.
+Each game client has its own file with the same functions:
+
+- Retail: `MountsRarity.lua`
+- Forever: `MountsRarity_Forever.lua`
+- Classic: no file. The library gives no data on Classic.
+
+The files do not depend on each other, and the sequence in which they load has no effect.
 
 Load `MountsRarity-2.0.xml` to include both. To load only the file that the client needs, add these lines to the TOC file of your addon:
 
