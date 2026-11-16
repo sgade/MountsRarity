@@ -8,7 +8,7 @@ A World of Warcraft addon library that provides rarity data for mounts among the
 
 Download this library addon to provide the most current database. Your addons that use this library will pick it up automatically.
 
-The addon supports World of Warcraft Retail and World of Warcraft: Forever. Each game client only uses its own data. Forever has no rarity data yet, because Data for Azeroth does not publish it.
+The addon supports World of Warcraft Retail and World of Warcraft: Forever. Each game client only uses its own data.
 
 Internally, only the newest version of this library will be loaded and used for all addons.
 
@@ -89,7 +89,7 @@ The data source for the rarity data is [Data for Azeroth](https://www.dataforaze
 
 Each day, there is a check for new data that publishes a new version with updated rarity values. This happens effectively twice a week.
 
-The same check looks for Forever data. Data for Azeroth does not publish Forever rarity data yet. When it does, the check adds the data to `MountsRarity_Forever.lua`.
+The same check updates the Retail data in `MountsRarity.lua` and the Forever data in `MountsRarity_Forever.lua`. A new version always contains both files.
 
 ## ⚙️ Maintenance
 

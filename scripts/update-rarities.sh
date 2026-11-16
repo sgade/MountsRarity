@@ -51,12 +51,6 @@ esac
 echo "[$CLIENT] Downloading version information..."
 VERSION_RESPONSE=$(get "$DATA_BASE_URL/$CLIENT/dynamic/index.json")
 
-# Data for Azeroth does not publish rarity data for every client yet.
-if [[ "$CLIENT" != "retail" ]] && echo "$VERSION_RESPONSE" | jq -e 'has("mountsrarity") | not' > /dev/null; then
-    echo "[$CLIENT] Data for Azeroth does not publish 'mountsrarity'. $MOUNTS_FILE is unchanged."
-    exit 0
-fi
-
 echo "$VERSION_RESPONSE" | jq -e '(.mountsrarity | type) == "string" and (.mountsrarity | length) > 0' > /dev/null \
     || fail "Unexpected version response: 'mountsrarity' is missing or not a non-empty string."
 

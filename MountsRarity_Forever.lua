@@ -24,7 +24,7 @@
 
 -- This build version gets automatically updated to the current UTC date and time (YYYYMMDDHHMM).
 -- Using a timestamp instead of e.g. a CI run number keeps this reproducible across forks and git hosts.
-local MINOR = 202611080622
+local MINOR = 202611161404
 -- This data is only valid for one game client. Host addons can load this file on any client,
 -- so it registers at version 0 on other clients. The library is then available without data,
 -- and the file for the current client always replaces it.

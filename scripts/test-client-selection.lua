@@ -31,19 +31,18 @@ end
 local retailSource = readFile(RETAIL_FILE)
 local foreverSource = readFile(FOREVER_FILE)
 
--- The Forever file has no data until Data for Azeroth publishes it.
-local function plainReplace(source, search, replacement)
-  local first, last = source:find(search, 1, true)
-  assert(first, "Text not found: " .. search)
-  return source:sub(1, first - 1) .. replacement .. source:sub(last + 1)
+-- The tests use fixed Forever data, so the results do not change when the rarity data is updated.
+local function withFixedData(source, data)
+  local _, last = source:find(DATA_START, 1, true)
+  assert(last, "Data start not found")
+  return source:sub(1, last) .. data .. "} end\n"
 end
 
-local foreverSourceWithData = plainReplace(
+local foreverSourceWithData = withFixedData(
   foreverSource,
-  DATA_START,
-  DATA_START .. ("  [%d] = %s,\n"):format(SHARED_MOUNT_ID, FOREVER_RARITY)
+  ("  [%d] = %s,\n"):format(SHARED_MOUNT_ID, FOREVER_RARITY)
 )
-foreverSourceWithData = foreverSourceWithData:gsub("local LAST_UPDATED = 0", "local LAST_UPDATED = 1000")
+foreverSourceWithData = foreverSourceWithData:gsub("local LAST_UPDATED = %d+", "local LAST_UPDATED = 1000")
 
 local function setUpClient(project)
   _G.LibStub = nil
@@ -128,10 +127,6 @@ local tests = {
   ["forever client with only the Retail file gets no data"] = function()
     setUpClient(PROJECT_CAMELOT)
     assertNoData(loadInOrder({ retail }), "host")
-  end,
-  ["forever client without published data gets no data"] = function()
-    setUpClient(PROJECT_CAMELOT)
-    assertNoData(loadInOrder({ { foreverSource, FOREVER_FILE } }), "unpublished")
   end,
   ["forever file replaces an old copy without a client check"] = function()
     setUpClient(PROJECT_CAMELOT)
