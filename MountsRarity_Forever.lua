@@ -29,12 +29,17 @@ local MINOR = 202611161404
 -- so it registers at version 0 on other clients. The library is then available without data,
 -- and the file for the current client always replaces it.
 local IS_MATCHING_CLIENT = WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
+--@debug@
+if not IS_MATCHING_CLIENT then
+  print("MountsRarity: MountsRarity_Forever.lua is not for this game client and gives no data. Load it only on its game client.")
+end
+--@end-debug@
 ---@class MountsRarity
 local MountsRarity = LibStub:NewLibrary("MountsRarity-2.0", IS_MATCHING_CLIENT and MINOR or 0)
 if not MountsRarity then return end -- already loaded and no upgrade necessary
 
 -- The UTC time this data was last generated, as a Unix timestamp (seconds since epoch).
--- Gets automatically updated whenever the data changes. 0 means that there is no data.
+-- Gets automatically updated whenever the data changes.
 local LAST_UPDATED = 1794837126
 
 ---@type fun(): MountsRarity.RarityData
@@ -78,9 +83,9 @@ end
 ---Returns the UTC time this library's data was last generated, as a Unix timestamp
 ---(seconds since epoch). Pass it to `date()` for formatting, or compare it against
 ---`time()` to derive a relative age.
----@return number|nil timestamp Unix timestamp (seconds since epoch, UTC), or `nil` if there is no data for this client.
+---@return number|nil timestamp Unix timestamp (seconds since epoch, UTC), or `nil` if this file is loaded on a different game client.
 function MountsRarity:GetLastUpdated()
-  if not IS_MATCHING_CLIENT or LAST_UPDATED == 0 then
+  if not IS_MATCHING_CLIENT then
     return nil
   end
 

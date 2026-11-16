@@ -44,14 +44,17 @@ local foreverSourceWithData = withFixedData(
 )
 foreverSourceWithData = foreverSourceWithData:gsub("local LAST_UPDATED = %d+", "local LAST_UPDATED = 1000")
 
+local printed = {}
+
 local function setUpClient(project)
+  printed = {}
   _G.LibStub = nil
   _G.WOW_PROJECT_ID = project
   _G.WOW_PROJECT_MAINLINE = PROJECT_MAINLINE
   _G.WOW_PROJECT_CAMELOT = PROJECT_CAMELOT
   _G.strmatch = string.match
   _G.debugprofilestop = function() return 0 end
-  _G.print = function() end
+  _G.print = function(message) printed[#printed + 1] = message end
   assert(loadChunk(readFile("Libs/LibStub/LibStub.lua")))()
 end
 
@@ -97,6 +100,7 @@ end
 local function normalizedHeader(source)
   local first = assert(source:find(MARKER, 1, true), "Data marker not found")
   return (source:sub(1, first - 1)
+    :gsub("MountsRarity_Forever%.lua", "MountsRarity.lua")
     :gsub("MountsRarity/MountsRarity_?F?o?r?e?v?e?r?%.lua", "FILE")
     :gsub("local MINOR = %d+", "local MINOR = 0")
     :gsub("local LAST_UPDATED = %d+", "local LAST_UPDATED = 0")
@@ -127,6 +131,18 @@ local tests = {
   ["forever client with only the Retail file gets no data"] = function()
     setUpClient(PROJECT_CAMELOT)
     assertNoData(loadInOrder({ retail }), "host")
+  end,
+  ["retail client prints a debug message only for the Forever file"] = function()
+    setUpClient(PROJECT_MAINLINE)
+    loadInOrder({ retail, forever })
+    assertEqual(#printed, 1, "message count")
+    assert(printed[1]:find(FOREVER_FILE, 1, true), "message does not name the Forever file")
+  end,
+  ["forever client prints a debug message only for the Retail file"] = function()
+    setUpClient(PROJECT_CAMELOT)
+    loadInOrder({ forever, retail })
+    assertEqual(#printed, 1, "message count")
+    assert(printed[1]:find(RETAIL_FILE, 1, true), "message does not name the Retail file")
   end,
   ["forever file replaces an old copy without a client check"] = function()
     setUpClient(PROJECT_CAMELOT)

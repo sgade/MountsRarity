@@ -38,10 +38,12 @@ Load `MountsRarity-2.0.xml` to include both. To load only the file that the clie
 
 ```toc
 Libs\MountsRarity-2.0\MountsRarity.lua [AllowLoadGameType standard]
-Libs\MountsRarity-2.0\MountsRarity_Forever.lua [AllowLoadGameType camelot][ExcludeLoadGameType standard, classic]
+Libs\MountsRarity-2.0\MountsRarity_Forever.lua [AllowLoadGameType camelot]
 ```
 
-A file that loads on a different client gives no data. If your addon supports Forever and loads only `MountsRarity.lua`, it gets no rarities on Forever.
+A file that loads on a different client gives no data: `GetData()` returns an empty table, and `GetRarityByID()` and `GetLastUpdated()` return `nil`. If your addon supports Forever and loads only `MountsRarity.lua`, it gets no rarities on Forever.
+
+A copy that is not a packaged release also prints a message to the chat when a file loads on a different client.
 
 Update your included copy before you add Forever to your addon. Older copies do not check the client and give Retail data on Forever.
 
@@ -62,7 +64,7 @@ local mountId = 6
 local rarity = MountsRarity:GetRarityByID(mountId)
 ```
 
-The value is `nil` if the mount is not tracked or if there is no data for the current client.
+The value is `nil` if the mount is not tracked.
 
 ### Get all rarity data
 
@@ -72,11 +74,9 @@ To get the entire dataset, organized by mount id and its rarity, call `GetData()
 local data = MountsRarity:GetData()
 ```
 
-The table is empty if there is no data for the current client.
-
 ### Get the data's age
 
-To find out when the shipped rarity data was last generated, call `GetLastUpdated()`. It returns a Unix timestamp (seconds since epoch, UTC), so you can format it yourself (e.g. with `date()`) or compare it against `time()` to show a relative age. It returns `nil` if there is no data for the current client.
+To find out when the shipped rarity data was last generated, call `GetLastUpdated()`. It returns a Unix timestamp (seconds since epoch, UTC), so you can format it yourself (e.g. with `date()`) or compare it against `time()` to show a relative age.
 
 ```lua
 local lastUpdated = MountsRarity:GetLastUpdated()

@@ -22,4 +22,4 @@
 embeds.xml
 
 MountsRarity.lua [AllowLoadGameType standard]
-MountsRarity_Forever.lua [AllowLoadGameType camelot][ExcludeLoadGameType standard, classic]
+MountsRarity_Forever.lua [AllowLoadGameType camelot]
