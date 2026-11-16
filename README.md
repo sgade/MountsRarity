@@ -41,9 +41,13 @@ Libs\MountsRarity-2.0\MountsRarity.lua [AllowLoadGameType standard]
 Libs\MountsRarity-2.0\MountsRarity_Forever.lua [AllowLoadGameType camelot]
 ```
 
-A file that loads on a different client gives no data: `GetData()` returns an empty table, and `GetRarityByID()` and `GetLastUpdated()` return `nil`. If your addon supports Forever and loads only `MountsRarity.lua`, it gets no rarities on Forever.
+A file gives data only on its own client. On each other client, it gives no data and no error: `GetData()` returns an empty table, and `GetRarityByID()` and `GetLastUpdated()` return `nil`. If your addon loads only `MountsRarity.lua`, it gets no rarities on Forever and on Classic.
 
-A copy that is not a packaged release also prints a message to the chat when a file loads on a different client.
+To add Forever to your addon, do the step for the method that your addon uses:
+
+- `MountsRarity-2.0.xml`: no change is necessary. If the line in your TOC file has a game type condition, permit Forever (`[AllowLoadGameType standard, camelot]`).
+- `MountsRarity.lua` loaded directly: also load `MountsRarity_Forever.lua`.
+- The separately installed addon: no change is necessary.
 
 Update your included copy before you add Forever to your addon. Older copies do not check the client and give Retail data on Forever.
 

@@ -100,7 +100,6 @@ end
 local function normalizedHeader(source)
   local first = assert(source:find(MARKER, 1, true), "Data marker not found")
   return (source:sub(1, first - 1)
-    :gsub("MountsRarity_Forever%.lua", "MountsRarity.lua")
     :gsub("MountsRarity/MountsRarity_?F?o?r?e?v?e?r?%.lua", "FILE")
     :gsub("local MINOR = %d+", "local MINOR = 0")
     :gsub("local LAST_UPDATED = %d+", "local LAST_UPDATED = 0")
@@ -132,17 +131,15 @@ local tests = {
     setUpClient(PROJECT_CAMELOT)
     assertNoData(loadInOrder({ retail }), "host")
   end,
-  ["retail client prints a debug message only for the Forever file"] = function()
-    setUpClient(PROJECT_MAINLINE)
-    loadInOrder({ retail, forever })
-    assertEqual(#printed, 1, "message count")
-    assert(printed[1]:find(FOREVER_FILE, 1, true), "message does not name the Forever file")
-  end,
-  ["forever client prints a debug message only for the Retail file"] = function()
-    setUpClient(PROJECT_CAMELOT)
-    loadInOrder({ forever, retail })
-    assertEqual(#printed, 1, "message count")
-    assert(printed[1]:find(RETAIL_FILE, 1, true), "message does not name the Retail file")
+  -- Host addons can include a copy that is not packaged. A message at load time would show to their users.
+  ["no file prints a message when it loads"] = function()
+    for _, project in ipairs({ PROJECT_MAINLINE, PROJECT_CAMELOT, PROJECT_CLASSIC }) do
+      for _, sources in ipairs({ { retail, forever }, { forever, retail }, { retail }, { forever } }) do
+        setUpClient(project)
+        loadInOrder(sources)
+        assertEqual(#printed, 0, ("message count on project %d"):format(project))
+      end
+    end
   end,
   ["forever file replaces an old copy without a client check"] = function()
     setUpClient(PROJECT_CAMELOT)

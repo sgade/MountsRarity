@@ -29,11 +29,6 @@ local MINOR = 202611161404
 -- so it registers at version 0 on other clients. The library is then available without data,
 -- and the file for the current client always replaces it.
 local IS_MATCHING_CLIENT = WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
---@debug@
-if not IS_MATCHING_CLIENT then
-  print("MountsRarity: MountsRarity_Forever.lua is not for this game client and gives no data. Load it only on its game client.")
-end
---@end-debug@
 ---@class MountsRarity
 local MountsRarity = LibStub:NewLibrary("MountsRarity-2.0", IS_MATCHING_CLIENT and MINOR or 0)
 if not MountsRarity then return end -- already loaded and no upgrade necessary
