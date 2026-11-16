@@ -35,7 +35,7 @@ if not MountsRarity then return end -- already loaded and no upgrade necessary
 
 -- The UTC time this data was last generated, as a Unix timestamp (seconds since epoch).
 -- Gets automatically updated whenever the data changes. 0 means that there is no data.
-local LAST_UPDATED = 0
+local LAST_UPDATED = 1794837126
 
 ---@type fun(): MountsRarity.RarityData
 local lazyLoadData = function()
@@ -89,4 +89,42 @@ end
 
 -- Everything after this line gets automatically replaced and updated.
 lazyLoadData = function() return {
+  [6] = 0.1517,
+  [9] = 0.024,
+  [11] = 0.2236,
+  [12] = 0.1837,
+  [14] = 0.048,
+  [17] = 0.8384,
+  [18] = 0.3513,
+  [19] = 0.1118,
+  [20] = 0.008,
+  [21] = 0.1038,
+  [24] = 0.2316,
+  [25] = 0.0879,
+  [26] = 0.4791,
+  [27] = 0.04,
+  [31] = 0.1917,
+  [34] = 0.3274,
+  [36] = 0.04,
+  [38] = 0.0959,
+  [39] = 0.0959,
+  [40] = 0.1038,
+  [41] = 1.014,
+  [57] = 0.0559,
+  [58] = 0.1517,
+  [65] = 0.0719,
+  [66] = 0.024,
+  [71] = 0.032,
+  [72] = 0.048,
+  [89] = 0.008,
+  [92] = 0.008,
+  [2923] = 0.4472,
+  [2955] = 0.1597,
+  [2958] = 0.2236,
+  [2995] = 0.3513,
+  [2997] = 0.1438,
+  [3037] = 0.0799,
+  [3038] = 0.3513,
+  [3111] = 56.6627,
+  [3130] = 47.4252,
 } end
