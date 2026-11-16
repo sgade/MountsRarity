@@ -14,10 +14,13 @@ Internally, only the newest version of this library will be loaded and used for 
 
 ### Addons using this library
 
-- [MountJournalEnhanced](https://github.com/exochron/MountJournalEnhanced)
-- [LiteMount](https://github.com/xod-wow/LiteMount)
+- [Mount Journal Enhanced](https://www.curseforge.com/wow/addons/mount-journal-enhanced)
+- [LiteMount](https://www.curseforge.com/wow/addons/litemount)
 - [Exquisite](https://www.curseforge.com/wow/addons/exquisite)
-- [Master Mounts](https://www.curseforge.com/wow/addons/master-mounts-world-tour)
+- [Master Mounts - World Tour](https://www.curseforge.com/wow/addons/master-mounts-world-tour)
+- [MountCollector](https://www.curseforge.com/wow/addons/mountcollector)
+- [MountTrail](https://www.curseforge.com/wow/addons/mounttrail)
+- [Mount Buff Info](https://www.curseforge.com/wow/addons/mount-buff-info)
 - ... yours?
 
 ## 🧑‍💻 For addon developers
