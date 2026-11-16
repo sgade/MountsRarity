@@ -37,18 +37,26 @@ jobs:
           sed -i "s/MINOR[[:space:]]*=[[:space:]]*[[:digit:]]\+/MINOR = $NEXT_MINOR/" MountsRarity.lua
           sed -i "s/LAST_UPDATED[[:space:]]*=[[:space:]]*[[:digit:]]\+/LAST_UPDATED = $NOW_EPOCH/" MountsRarity.lua
 
-      - name: Define release tag
+      - name: Commit version change
         if: steps.verify-changes.outputs.files_changed == 'true'
+        id: commit
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore(data): update rarity data"
+
+      - name: Define release tag
+        if: steps.commit.outputs.changes_detected == 'true'
         id: define-release-tag
         uses: mathieudutour/github-tag-action@v7
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag_prefix: ""
           dry_run: true
+          commit_sha: ${{ steps.commit.outputs.commit_hash }}
 
-      - name: Commit version change
-        if: steps.verify-changes.outputs.files_changed == 'true'
+      - name: Push release tag
+        if: steps.commit.outputs.changes_detected == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: "chore(data): update rarity data"
+          create_git_tag_only: true
           tagging_message: ${{ steps.define-release-tag.outputs.new_tag }}
