@@ -1,0 +1,84 @@
+name: Validate sources
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    name: Find changed sources
+    runs-on: ubuntu-latest
+    outputs:
+      lua: ${{ steps.filter.outputs.lua }}
+      shell: ${{ steps.filter.outputs.shell }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # A change to the tool versions or to this workflow can change the result,
+      # so it also starts the validation.
+      - name: Find changed sources
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            lua:
+              - '**/*.lua'
+              - 'mise.toml'
+              - '.github/workflows/validate-sources.yml'
+            shell:
+              - '**/*.sh'
+              - 'mise.toml'
+              - '.github/workflows/validate-sources.yml'
+
+  validate_lua:
+    name: Validate Lua syntax
+    needs: changes
+    if: needs.changes.outputs.lua == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # mise builds Lua 5.1 from source, and that build needs the readline headers.
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libreadline-dev
+
+      - name: Install tools
+        uses: jdx/mise-action@v5
+        with:
+          install_args: lua
+
+      - name: Validate Lua syntax
+        run: |
+          exit_code=0
+
+          while IFS= read -r -d '' file; do
+            echo "Checking $file..."
+            if ! luac -p "$file"; then
+              exit_code=1
+            fi
+          done < <(git ls-files -z '*.lua')
+
+          exit $exit_code
+
+  validate_shell:
+    name: Validate shell scripts
+    needs: changes
+    if: needs.changes.outputs.shell == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install tools
+        uses: jdx/mise-action@v5
+        with:
+          install_args: shellcheck
+
+      - name: Run ShellCheck
+        run: git ls-files -z '*.sh' | xargs -0 shellcheck -x

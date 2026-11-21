@@ -16,8 +16,14 @@ jobs:
           token: ${{ secrets.PUSH_TOKEN }}
           fetch-tags: true
 
-      - name: Install Lua
-        run: sudo apt-get update && sudo apt-get install -y lua5.1
+      # mise builds Lua 5.1 from source, and that build needs the readline headers.
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libreadline-dev
+
+      - name: Install tools
+        uses: jdx/mise-action@v5
+        with:
+          install_args: jq lua
 
       - name: Update rarities
         run: ./scripts/update-rarities.sh
