@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-MOUNTS_FILE="MountsRarity.lua"
+DATA_BASE_URL="${DATA_BASE_URL:-https://www.dataforazeroth.com}"
 # Refuse the update if the new mount count drops below this percentage of the previous count.
 # Guards against partial/broken upstream responses silently wiping out most of the data.
 MIN_COUNT_RATIO=95
@@ -29,14 +29,51 @@ function fail() {
     exit 1
 }
 
-echo "Downloading version information..."
-VERSION_RESPONSE=$(get 'https://dataforazeroth.com/retail/dynamic/index.json')
+MOUNTS_FILE="MountsRarity.lua"
+
+CLIENT="${1:-all}"
+case "$CLIENT" in
+    all)
+        # Each client runs in its own process and changes only its own data block,
+        # so a Forever problem cannot stop or change the Retail update.
+        # The clients run one after the other because they write to the same file.
+        "$0" retail
+        "$0" forever || echo "::warning::Forever rarity data was not updated. Examine the log for the reason."
+        exit 0
+        ;;
+    # A client without the constants must not match: there, both sides of the comparison are nil.
+    retail)
+        CLIENT_CONDITION="WOW_PROJECT_MAINLINE and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE"
+        ;;
+    forever)
+        CLIENT_CONDITION="WOW_PROJECT_CAMELOT and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT"
+        ;;
+    *)
+        fail "Unknown client: $CLIENT (expected retail or forever)."
+        ;;
+esac
+
+# The data of this client is the block from BEGIN_MARKER to END_MARKER in MOUNTS_FILE.
+BEGIN_MARKER="-- BEGIN DATA $CLIENT"
+END_MARKER="-- END DATA $CLIENT"
+
+function data_block() {
+    awk -v begin="$BEGIN_MARKER" -v end="$END_MARKER" '$0 == begin { found = 1 } found { print } $0 == end { found = 0 }' "$1"
+}
+
+[[ "$(grep -cxF -- "$BEGIN_MARKER" "$MOUNTS_FILE")" -eq 1 && "$(grep -cxF -- "$END_MARKER" "$MOUNTS_FILE")" -eq 1 ]] \
+    || fail "$MOUNTS_FILE must contain the lines '$BEGIN_MARKER' and '$END_MARKER' one time each."
+[[ "$(grep -cE '^local MINOR = [0-9]+$' "$MOUNTS_FILE")" -eq 1 ]] \
+    || fail "$MOUNTS_FILE must contain the line 'local MINOR = <number>' one time."
+
+echo "[$CLIENT] Downloading version information..."
+VERSION_RESPONSE=$(get "$DATA_BASE_URL/$CLIENT/dynamic/index.json")
 
 echo "$VERSION_RESPONSE" | jq -e '(.mountsrarity | type) == "string" and (.mountsrarity | length) > 0' > /dev/null \
     || fail "Unexpected version response: 'mountsrarity' is missing or not a non-empty string."
 
-echo "Downloading mountsrarity information..."
-MOUNTSRARITY_SOURCE="https://www.dataforazeroth.com$(echo "$VERSION_RESPONSE" | jq -r '.mountsrarity')"
+echo "[$CLIENT] Downloading mountsrarity information..."
+MOUNTSRARITY_SOURCE="$DATA_BASE_URL$(echo "$VERSION_RESPONSE" | jq -r '.mountsrarity')"
 MOUNTSRARITY_RESPONSE=$(get "$MOUNTSRARITY_SOURCE")
 
 echo "$MOUNTSRARITY_RESPONSE" | jq -e '(.mounts | type) == "object"' > /dev/null \
@@ -60,8 +97,25 @@ if [[ "$INVALID_COUNT" -gt 0 ]]; then
     fail "Refusing to update: found $INVALID_COUNT invalid mount entries above (mount ID must be an integer, rarity must be a number between 0 and 100)."
 fi
 
+# Retail data at the wrong path must not reach this client: its mount IDs are partly the same.
+if [[ "$CLIENT" != "retail" ]]; then
+    echo "$VERSION_RESPONSE" | jq -e '(.mounts | type) == "string" and (.mounts | length) > 0' > /dev/null \
+        || fail "Unexpected version response: 'mounts' is missing or not a non-empty string."
+
+    CATALOG_RESPONSE=$(get "$DATA_BASE_URL$(echo "$VERSION_RESPONSE" | jq -r '.mounts')")
+    echo "$CATALOG_RESPONSE" | jq -e '(.mounts | type) == "array" and (.mounts | length) > 0' > /dev/null \
+        || fail "Unexpected mounts response: 'mounts' is missing or not a non-empty array."
+
+    UNKNOWN_IDS=$(comm -23 \
+        <(echo "$MOUNTSRARITY" | jq -r '.[].key' | LC_ALL=C sort -u) \
+        <(echo "$CATALOG_RESPONSE" | jq -r '.mounts[].id' | LC_ALL=C sort -u))
+    if [[ -n "$UNKNOWN_IDS" ]]; then
+        fail "Refusing to update: these mount IDs are not in the $CLIENT mount catalog: $(echo "$UNKNOWN_IDS" | tr '\n' ' ')"
+    fi
+fi
+
 NEW_COUNT=$(echo "$MOUNTSRARITY" | jq 'length')
-PREVIOUS_COUNT=$(grep -cE '^[[:space:]]*\[[0-9]+\] = ' "$MOUNTS_FILE" || true)
+PREVIOUS_COUNT=$(data_block "$MOUNTS_FILE" | grep -cE '^[[:space:]]*\[[0-9]+\] = ' || true)
 echo "Downloaded $NEW_COUNT mounts (previously $PREVIOUS_COUNT)."
 
 if [[ "$PREVIOUS_COUNT" -gt 0 ]]; then
@@ -73,14 +127,29 @@ fi
 
 # Write to a temporary file first so $MOUNTS_FILE is only touched once the result is known-good.
 TMP_MOUNTS_FILE=$(mktemp)
-trap 'rm -f "$TMP_MOUNTS_FILE"' EXIT
+TMP_DATA_BLOCK=$(mktemp)
+trap 'rm -f "$TMP_MOUNTS_FILE" "$TMP_DATA_BLOCK"' EXIT
 
-sed '/Everything after this line/q' "$MOUNTS_FILE" > "$TMP_MOUNTS_FILE"
+# The version and the data time come from the same moment. MINOR is the UTC date and time (YYYYMMDDHHMM).
+read -r NOW_EPOCH NEXT_MINOR < <(date -u +'%s %Y%m%d%H%M')
 {
-    echo "lazyLoadData = function() return {"
-    echo "$MOUNTSRARITY" | jq -r '.[] | "  [" + .key + "] = " + ( .value | tostring ) + ","'
-    echo "} end"
-} >> "$TMP_MOUNTS_FILE"
+    echo "$BEGIN_MARKER"
+    echo "if $CLIENT_CONDITION then"
+    echo "  lastUpdated = $NOW_EPOCH"
+    echo "  data = {"
+    echo "$MOUNTSRARITY" | jq -r '.[] | "    [" + .key + "] = " + ( .value | tostring ) + ","'
+    echo "  }"
+    echo "end"
+    echo "$END_MARKER"
+} > "$TMP_DATA_BLOCK"
+
+# Replace only the data block of this client and the version. All other lines stay the same.
+awk -v begin="$BEGIN_MARKER" -v end="$END_MARKER" -v block="$TMP_DATA_BLOCK" -v minor="$NEXT_MINOR" '
+    /^local MINOR = [0-9]+$/ { print "local MINOR = " minor; next }
+    $0 == begin { while ((getline line < block) > 0) print line; skip = 1; next }
+    $0 == end { skip = 0; next }
+    !skip { print }
+' "$MOUNTS_FILE" > "$TMP_MOUNTS_FILE"
 
 echo "Validating generated Lua syntax..."
 LUAC_BIN=""
@@ -106,6 +175,12 @@ else
     fail "Refusing to update: no Lua interpreter (luac/lua, any version) available to validate the generated $MOUNTS_FILE."
 fi
 
+# Only the data decides if the file changes. A new timestamp alone must not create a release.
+if cmp -s <(data_block "$MOUNTS_FILE" | grep -v '^  lastUpdated = ') <(data_block "$TMP_MOUNTS_FILE" | grep -v '^  lastUpdated = '); then
+    echo "[$CLIENT] The data in $MOUNTS_FILE is already current."
+    exit 0
+fi
+
 cat "$TMP_MOUNTS_FILE" > "$MOUNTS_FILE"
 
-echo "$MOUNTS_FILE written and validated."
+echo "[$CLIENT] $MOUNTS_FILE written and validated (MINOR $NEXT_MINOR)."

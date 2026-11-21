@@ -8,14 +8,19 @@ A World of Warcraft addon library that provides rarity data for mounts among the
 
 Download this library addon to provide the most current database. Your addons that use this library will pick it up automatically.
 
+The addon supports World of Warcraft Retail and World of Warcraft: Forever. Each game client only uses its own data.
+
 Internally, only the newest version of this library will be loaded and used for all addons.
 
 ### Addons using this library
 
-- [MountJournalEnhanced](https://github.com/exochron/MountJournalEnhanced)
-- [LiteMount](https://github.com/xod-wow/LiteMount)
+- [Mount Journal Enhanced](https://www.curseforge.com/wow/addons/mount-journal-enhanced)
+- [LiteMount](https://www.curseforge.com/wow/addons/litemount)
 - [Exquisite](https://www.curseforge.com/wow/addons/exquisite)
-- [Master Mounts](https://www.curseforge.com/wow/addons/master-mounts-world-tour)
+- [Master Mounts - World Tour](https://www.curseforge.com/wow/addons/master-mounts-world-tour)
+- [MountCollector](https://www.curseforge.com/wow/addons/mountcollector)
+- [MountTrail](https://www.curseforge.com/wow/addons/mounttrail)
+- [Mount Buff Info](https://www.curseforge.com/wow/addons/mount-buff-info)
 - ... yours?
 
 ## 🧑‍💻 For addon developers
@@ -27,6 +32,18 @@ Players can opt into installing this addon separately to have a more recent vers
 Interally, only the most recent version will be loaded, regardless of where it is provided from.
 
 Mount rarities are floating point values between `0` (no player has it) and `100` (every player has it).
+
+### Retail, Forever and other game clients
+
+`MountsRarity.lua` contains the data of all supported game clients. When it loads, it selects the data of the current client:
+
+- Retail: Retail data.
+- Forever: Forever data.
+- Other clients, for example Classic: no data and no error. `GetData()` returns an empty table, and `GetRarityByID()` and `GetLastUpdated()` return `nil`.
+
+To add Forever to your addon, you do not have to change how you include the library. If the line in your TOC file has a game type condition, permit Forever (`[AllowLoadGameType standard, camelot]`).
+
+Update your included copy before you add Forever to your addon. Older copies do not check the client and give Retail data on Forever.
 
 ### Loading the library
 
@@ -44,6 +61,8 @@ To get the rarity value of a mount, call `GetRarityById(mountID)`.
 local mountId = 6
 local rarity = MountsRarity:GetRarityByID(mountId)
 ```
+
+The value is `nil` if the mount is not tracked.
 
 ### Get all rarity data
 
@@ -68,10 +87,12 @@ The data source for the rarity data is [Data for Azeroth](https://www.dataforaze
 
 Each day, there is a check for new data that publishes a new version with updated rarity values. This happens effectively twice a week.
 
+The same check updates the Retail data and the Forever data. Each client has its own data block in `MountsRarity.lua`.
+
 ## ⚙️ Maintenance
 
 The addon interface version in `MountsRarity.toc` is updated from Blizzard's patch CDN.
-The updater reads the retail mainline product and the retail PTR/beta product, then writes both interface versions when they differ.
+The updater reads the retail mainline product, the retail PTR/beta product and the Forever product (`wowf`), then writes all different interface versions. Retail and Forever each have their own minimum version.
 
 Run the updater locally:
 
@@ -86,6 +107,12 @@ Verify that the TOC is already current without writing changes:
 ```
 
 GitHub Actions runs the same updater every Tuesday and commits `MountsRarity.toc` when Blizzard has published a new interface version.
+
+Update the rarity data of one client, or of all clients when you do not give an argument. When the data of a client changes, the updater also sets the version (`MINOR`) to the current UTC date and time:
+
+```bash
+./scripts/update-rarities.sh [retail|forever]
+```
 
 ## ⚙️ Issues
 
