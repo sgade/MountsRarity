@@ -3,7 +3,8 @@ name: Update data
 on:
   workflow_dispatch:
   schedule:
-    - cron: '23 0 * * *'
+    # dataforazeroth.com publishes new rarity data before 00:45 UTC on Thursday and Sunday.
+    - cron: '47 2 * * 0,4'
 
 jobs:
   update_mountrarities:
