@@ -12,8 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install Lua
-        run: sudo apt-get update && sudo apt-get install -y lua5.1
+      # mise builds Lua 5.1 from source, and that build needs the readline headers.
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libreadline-dev
+
+      - name: Install tools
+        uses: jdx/mise-action@v5
+        with:
+          install_args: lua
 
       - name: Validate Lua syntax
         run: |
@@ -21,9 +27,24 @@ jobs:
 
           while IFS= read -r -d '' file; do
             echo "Checking $file..."
-            if ! luac5.1 -p "$file"; then
+            if ! luac -p "$file"; then
               exit_code=1
             fi
           done < <(git ls-files -z '*.lua')
 
           exit $exit_code
+
+  validate_scripts:
+    name: Validate shell scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install tools
+        uses: jdx/mise-action@v5
+        with:
+          install_args: shellcheck
+
+      - name: Run ShellCheck
+        run: git ls-files -z '*.sh' | xargs -0 shellcheck -x
