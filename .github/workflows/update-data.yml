@@ -28,14 +28,12 @@ jobs:
         with:
           files: |
             MountsRarity.lua
-            MountsRarity_Forever.lua
 
-      # Both files always get the same version. Each one must be newer than older copies of the other.
       - name: Set minor version
         if: steps.verify-changes.outputs.files_changed == 'true'
         run: |
           NEXT_MINOR=$(date -u +%Y%m%d%H%M)
-          sed -i "s/MINOR[[:space:]]*=[[:space:]]*[[:digit:]]\+/MINOR = $NEXT_MINOR/" MountsRarity.lua MountsRarity_Forever.lua
+          sed -i "s/MINOR[[:space:]]*=[[:space:]]*[[:digit:]]\+/MINOR = $NEXT_MINOR/" MountsRarity.lua
 
       - name: Commit version change
         if: steps.verify-changes.outputs.files_changed == 'true'

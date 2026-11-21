@@ -21,5 +21,4 @@
 
 embeds.xml
 
-MountsRarity.lua [AllowLoadGameType standard]
-MountsRarity_Forever.lua [AllowLoadGameType camelot]
+MountsRarity-2.0.xml

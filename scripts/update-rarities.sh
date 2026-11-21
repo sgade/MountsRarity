@@ -29,24 +29,40 @@ function fail() {
     exit 1
 }
 
+MOUNTS_FILE="MountsRarity.lua"
+
 CLIENT="${1:-all}"
 case "$CLIENT" in
     all)
-        # Each client runs in its own process, so a Forever problem cannot stop or change the Retail update.
+        # Each client runs in its own process and changes only its own data block,
+        # so a Forever problem cannot stop or change the Retail update.
+        # The clients run one after the other because they write to the same file.
         "$0" retail
         "$0" forever || echo "::warning::Forever rarity data was not updated. Examine the log for the reason."
         exit 0
         ;;
+    # A client without the constants must not match: there, both sides of the comparison are nil.
     retail)
-        MOUNTS_FILE="MountsRarity.lua"
+        CLIENT_CONDITION="WOW_PROJECT_MAINLINE and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE"
         ;;
     forever)
-        MOUNTS_FILE="MountsRarity_Forever.lua"
+        CLIENT_CONDITION="WOW_PROJECT_CAMELOT and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT"
         ;;
     *)
         fail "Unknown client: $CLIENT (expected retail or forever)."
         ;;
 esac
+
+# The data of this client is the block from BEGIN_MARKER to END_MARKER in MOUNTS_FILE.
+BEGIN_MARKER="-- BEGIN DATA $CLIENT"
+END_MARKER="-- END DATA $CLIENT"
+
+function data_block() {
+    awk -v begin="$BEGIN_MARKER" -v end="$END_MARKER" '$0 == begin { found = 1 } found { print } $0 == end { found = 0 }' "$1"
+}
+
+[[ "$(grep -cxF -- "$BEGIN_MARKER" "$MOUNTS_FILE")" -eq 1 && "$(grep -cxF -- "$END_MARKER" "$MOUNTS_FILE")" -eq 1 ]] \
+    || fail "$MOUNTS_FILE must contain the lines '$BEGIN_MARKER' and '$END_MARKER' one time each."
 
 echo "[$CLIENT] Downloading version information..."
 VERSION_RESPONSE=$(get "$DATA_BASE_URL/$CLIENT/dynamic/index.json")
@@ -97,7 +113,7 @@ if [[ "$CLIENT" != "retail" ]]; then
 fi
 
 NEW_COUNT=$(echo "$MOUNTSRARITY" | jq 'length')
-PREVIOUS_COUNT=$(grep -cE '^[[:space:]]*\[[0-9]+\] = ' "$MOUNTS_FILE" || true)
+PREVIOUS_COUNT=$(data_block "$MOUNTS_FILE" | grep -cE '^[[:space:]]*\[[0-9]+\] = ' || true)
 echo "Downloaded $NEW_COUNT mounts (previously $PREVIOUS_COUNT)."
 
 if [[ "$PREVIOUS_COUNT" -gt 0 ]]; then
@@ -109,15 +125,27 @@ fi
 
 # Write to a temporary file first so $MOUNTS_FILE is only touched once the result is known-good.
 TMP_MOUNTS_FILE=$(mktemp)
-trap 'rm -f "$TMP_MOUNTS_FILE"' EXIT
+TMP_DATA_BLOCK=$(mktemp)
+trap 'rm -f "$TMP_MOUNTS_FILE" "$TMP_DATA_BLOCK"' EXIT
 
 NOW_EPOCH=$(date -u +%s)
-sed -E -e "s/^(local LAST_UPDATED[[:space:]]*=[[:space:]]*)[0-9]+/\1$NOW_EPOCH/" -e '/Everything after this line/q' "$MOUNTS_FILE" > "$TMP_MOUNTS_FILE"
 {
-    echo "lazyLoadData = function() return {"
-    echo "$MOUNTSRARITY" | jq -r '.[] | "  [" + .key + "] = " + ( .value | tostring ) + ","'
-    echo "} end"
-} >> "$TMP_MOUNTS_FILE"
+    echo "$BEGIN_MARKER"
+    echo "if $CLIENT_CONDITION then"
+    echo "  lastUpdated = $NOW_EPOCH"
+    echo "  data = {"
+    echo "$MOUNTSRARITY" | jq -r '.[] | "    [" + .key + "] = " + ( .value | tostring ) + ","'
+    echo "  }"
+    echo "end"
+    echo "$END_MARKER"
+} > "$TMP_DATA_BLOCK"
+
+# Replace only the data block of this client. All other lines stay the same.
+awk -v begin="$BEGIN_MARKER" -v end="$END_MARKER" -v block="$TMP_DATA_BLOCK" '
+    $0 == begin { while ((getline line < block) > 0) print line; skip = 1; next }
+    $0 == end { skip = 0; next }
+    !skip { print }
+' "$MOUNTS_FILE" > "$TMP_MOUNTS_FILE"
 
 echo "Validating generated Lua syntax..."
 LUAC_BIN=""
@@ -144,11 +172,11 @@ else
 fi
 
 # Only the data decides if the file changes. A new timestamp alone must not create a release.
-if cmp -s <(sed -n '/Everything after this line/,$p' "$MOUNTS_FILE") <(sed -n '/Everything after this line/,$p' "$TMP_MOUNTS_FILE"); then
-    echo "$MOUNTS_FILE is already current."
+if cmp -s <(data_block "$MOUNTS_FILE" | grep -v '^  lastUpdated = ') <(data_block "$TMP_MOUNTS_FILE" | grep -v '^  lastUpdated = '); then
+    echo "[$CLIENT] The data in $MOUNTS_FILE is already current."
     exit 0
 fi
 
 cat "$TMP_MOUNTS_FILE" > "$MOUNTS_FILE"
 
-echo "$MOUNTS_FILE written and validated."
+echo "[$CLIENT] $MOUNTS_FILE written and validated."

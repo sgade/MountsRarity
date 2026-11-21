@@ -33,30 +33,15 @@ Interally, only the most recent version will be loaded, regardless of where it i
 
 Mount rarities are floating point values between `0` (no player has it) and `100` (every player has it).
 
-### Including the library for Retail and Forever
+### Retail, Forever and other game clients
 
-Each game client has its own file with the same functions:
+`MountsRarity.lua` contains the data of all supported game clients. When it loads, it selects the data of the current client:
 
-- Retail: `MountsRarity.lua`
-- Forever: `MountsRarity_Forever.lua`
-- Classic: no file. The library gives no data on Classic.
+- Retail: Retail data.
+- Forever: Forever data.
+- Other clients, for example Classic: no data and no error. `GetData()` returns an empty table, and `GetRarityByID()` and `GetLastUpdated()` return `nil`.
 
-The files do not depend on each other, and the sequence in which they load has no effect.
-
-Load `MountsRarity-2.0.xml` to include both. To load only the file that the client needs, add these lines to the TOC file of your addon:
-
-```toc
-Libs\MountsRarity-2.0\MountsRarity.lua [AllowLoadGameType standard]
-Libs\MountsRarity-2.0\MountsRarity_Forever.lua [AllowLoadGameType camelot]
-```
-
-A file gives data only on its own client. On each other client, it gives no data and no error: `GetData()` returns an empty table, and `GetRarityByID()` and `GetLastUpdated()` return `nil`. If your addon loads only `MountsRarity.lua`, it gets no rarities on Forever and on Classic.
-
-To add Forever to your addon, do the step for the method that your addon uses:
-
-- `MountsRarity-2.0.xml`: no change is necessary. If the line in your TOC file has a game type condition, permit Forever (`[AllowLoadGameType standard, camelot]`).
-- `MountsRarity.lua` loaded directly: also load `MountsRarity_Forever.lua`.
-- The separately installed addon: no change is necessary.
+To add Forever to your addon, you do not have to change how you include the library. If the line in your TOC file has a game type condition, permit Forever (`[AllowLoadGameType standard, camelot]`).
 
 Update your included copy before you add Forever to your addon. Older copies do not check the client and give Retail data on Forever.
 
@@ -102,7 +87,7 @@ The data source for the rarity data is [Data for Azeroth](https://www.dataforaze
 
 Each day, there is a check for new data that publishes a new version with updated rarity values. This happens effectively twice a week.
 
-The same check updates the Retail data in `MountsRarity.lua` and the Forever data in `MountsRarity_Forever.lua`. A new version always contains both files.
+The same check updates the Retail data and the Forever data. Each client has its own data block in `MountsRarity.lua`.
 
 ## ⚙️ Maintenance
 
@@ -127,12 +112,6 @@ Update the rarity data of one client, or of all clients when you do not give an 
 
 ```bash
 ./scripts/update-rarities.sh [retail|forever]
-```
-
-Test that each client gets only its own data:
-
-```bash
-lua5.1 scripts/test-client-selection.lua
 ```
 
 ## ⚙️ Issues
