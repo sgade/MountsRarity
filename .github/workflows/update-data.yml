@@ -29,12 +29,6 @@ jobs:
           files: |
             MountsRarity.lua
 
-      - name: Set minor version
-        if: steps.verify-changes.outputs.files_changed == 'true'
-        run: |
-          NEXT_MINOR=$(date -u +%Y%m%d%H%M)
-          sed -i "s/MINOR[[:space:]]*=[[:space:]]*[[:digit:]]\+/MINOR = $NEXT_MINOR/" MountsRarity.lua
-
       - name: Commit version change
         if: steps.verify-changes.outputs.files_changed == 'true'
         id: commit

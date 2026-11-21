@@ -63,6 +63,8 @@ function data_block() {
 
 [[ "$(grep -cxF -- "$BEGIN_MARKER" "$MOUNTS_FILE")" -eq 1 && "$(grep -cxF -- "$END_MARKER" "$MOUNTS_FILE")" -eq 1 ]] \
     || fail "$MOUNTS_FILE must contain the lines '$BEGIN_MARKER' and '$END_MARKER' one time each."
+[[ "$(grep -cE '^local MINOR = [0-9]+$' "$MOUNTS_FILE")" -eq 1 ]] \
+    || fail "$MOUNTS_FILE must contain the line 'local MINOR = <number>' one time."
 
 echo "[$CLIENT] Downloading version information..."
 VERSION_RESPONSE=$(get "$DATA_BASE_URL/$CLIENT/dynamic/index.json")
@@ -128,7 +130,8 @@ TMP_MOUNTS_FILE=$(mktemp)
 TMP_DATA_BLOCK=$(mktemp)
 trap 'rm -f "$TMP_MOUNTS_FILE" "$TMP_DATA_BLOCK"' EXIT
 
-NOW_EPOCH=$(date -u +%s)
+# The version and the data time come from the same moment. MINOR is the UTC date and time (YYYYMMDDHHMM).
+read -r NOW_EPOCH NEXT_MINOR < <(date -u +'%s %Y%m%d%H%M')
 {
     echo "$BEGIN_MARKER"
     echo "if $CLIENT_CONDITION then"
@@ -140,8 +143,9 @@ NOW_EPOCH=$(date -u +%s)
     echo "$END_MARKER"
 } > "$TMP_DATA_BLOCK"
 
-# Replace only the data block of this client. All other lines stay the same.
-awk -v begin="$BEGIN_MARKER" -v end="$END_MARKER" -v block="$TMP_DATA_BLOCK" '
+# Replace only the data block of this client and the version. All other lines stay the same.
+awk -v begin="$BEGIN_MARKER" -v end="$END_MARKER" -v block="$TMP_DATA_BLOCK" -v minor="$NEXT_MINOR" '
+    /^local MINOR = [0-9]+$/ { print "local MINOR = " minor; next }
     $0 == begin { while ((getline line < block) > 0) print line; skip = 1; next }
     $0 == end { skip = 0; next }
     !skip { print }
@@ -179,4 +183,4 @@ fi
 
 cat "$TMP_MOUNTS_FILE" > "$MOUNTS_FILE"
 
-echo "[$CLIENT] $MOUNTS_FILE written and validated."
+echo "[$CLIENT] $MOUNTS_FILE written and validated (MINOR $NEXT_MINOR)."

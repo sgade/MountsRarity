@@ -108,7 +108,7 @@ Verify that the TOC is already current without writing changes:
 
 GitHub Actions runs the same updater every Tuesday and commits `MountsRarity.toc` when Blizzard has published a new interface version.
 
-Update the rarity data of one client, or of all clients when you do not give an argument:
+Update the rarity data of one client, or of all clients when you do not give an argument. When the data of a client changes, the updater also sets the version (`MINOR`) to the current UTC date and time:
 
 ```bash
 ./scripts/update-rarities.sh [retail|forever]
