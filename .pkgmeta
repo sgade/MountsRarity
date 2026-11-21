@@ -1,5 +1,6 @@
 ignore:
   - scripts
+  - mise.toml
 
 embedded-libraries:
   - libstub
