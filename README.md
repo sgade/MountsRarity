@@ -10,7 +10,7 @@ Download this library addon to provide the most current database. Your addons th
 
 The addon supports World of Warcraft Retail and World of Warcraft: Forever. Each game client only uses its own data.
 
-Internally, only the newest version of this library will be loaded and used for all addons.
+Internally, only the newest version of this library will be loaded and used for all addons, regardless of where it is provided from.
 
 ### Addons using this library
 
@@ -29,7 +29,6 @@ This library can be included with the deployment of your addon.
 I recommend you regularly update the version that you ship with your addon as the data is updated multiple times per week.
 
 Players can opt into installing this addon separately to have a more recent version available as well.
-Interally, only the most recent version will be loaded, regardless of where it is provided from.
 
 Mount rarities are floating point values between `0` (no player has it) and `100` (every player has it).
 
@@ -55,7 +54,7 @@ local MountsRarity = LibStub("MountsRarity-2.0")
 
 ### Get rarity by mount id
 
-To get the rarity value of a mount, call `GetRarityById(mountID)`.
+To get the rarity value of a mount, call `GetRarityByID(mountID)`.
 
 ```lua
 local mountId = 6
@@ -85,14 +84,14 @@ print(date("%Y-%m-%d", lastUpdated))
 
 The data source for the rarity data is [Data for Azeroth](https://www.dataforazeroth.com/collections/mounts).
 
-Each day, there is a check for new data that publishes a new version with updated rarity values. This happens effectively twice a week.
+Every Thursday and Sunday, a check for new data occurs. If the data changed, the check publishes a new version with updated rarity values.
 
 The same check updates the Retail data and the Forever data. Each client has its own data block in `MountsRarity.lua`.
 
 ## ⚙️ Maintenance
 
 The addon interface version in `MountsRarity.toc` is updated from Blizzard's patch CDN.
-The updater reads the retail mainline product, the retail PTR/beta product and the Forever product (`wowf`), then writes all different interface versions. Retail and Forever each have their own minimum version.
+The updater reads the retail mainline product, the retail PTR and beta products and the Forever product (`wowf`), then writes all different interface versions. Retail and Forever each have their own minimum version.
 
 Run the updater locally:
 
@@ -111,9 +110,9 @@ GitHub Actions runs the same updater every Tuesday and commits `MountsRarity.toc
 Update the rarity data of one client, or of all clients when you do not give an argument. When the data of a client changes, the updater also sets the version (`MINOR`) to the current UTC date and time:
 
 ```bash
-./scripts/update-rarities.sh [retail|forever]
+./scripts/update-rarities.sh [all|retail|forever]
 ```
 
-## ⚙️ Issues
+## 🐞 Issues
 
 If you find any issues with this project, feel free to raise them [here](https://github.com/sgade/MountsRarity/issues).

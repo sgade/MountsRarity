@@ -49,6 +49,18 @@ function run_self() {
     "$BASH" "$SCRIPT_PATH" "$@"
 }
 
+function usage() {
+    cat <<EOF
+Usage: $0 [all|retail|forever]
+
+Updates the rarity data in ${MOUNTS_FILE}. Without an argument, updates all clients.
+
+Environment overrides:
+  DATA_BASE_URL               Data for Azeroth base URL. Default: https://www.dataforazeroth.com
+  NO_PROGRESS                 If set, do not show progress in an interactive terminal.
+EOF
+}
+
 function client_display_name() {
     case "$1" in
         retail) echo "Retail" ;;
@@ -62,9 +74,10 @@ function client_display_name() {
 # Each client runs in its own process and changes only its own data block,
 # so a Forever problem cannot stop or change the Retail update.
 function update_all_clients() {
-    local clients="retail forever"
+    local clients=(retail forever)
+    local count="${#clients[@]}"
     local work_dir client fetch_status apply_status
-    local index=0 count=2
+    local index=0
 
     work_dir="$(mktemp -d)"
     on_exit "rm -rf '$work_dir'"
@@ -73,15 +86,15 @@ function update_all_clients() {
     step "Downloading data for all clients..."
 
     bg_reset
-    for client in $clients; do
+    for client in "${clients[@]}"; do
         mkdir "$work_dir/$client"
         bg_start "$client" "Starting..." "$work_dir/$client.log" run_self --fetch "$client" "$work_dir/$client"
     done
     bg_wait 0 50
 
     # Show the result of each client in a fixed order, so the log is easy to read.
-    for client in $clients; do
-        group_start "$client"
+    for client in "${clients[@]}"; do
+        group_start "$(client_display_name "$client")"
         print_file "$work_dir/$client.log"
         print_file "$work_dir/$client.log.err" >&2
 
@@ -105,6 +118,13 @@ function update_all_clients() {
         fi
     done
 }
+
+case "${1:-}" in
+    -h|--help)
+        usage
+        exit 0
+        ;;
+esac
 
 if [[ "${1:-all}" == "all" ]]; then
     update_all_clients
@@ -131,7 +151,7 @@ case "$CLIENT" in
         CLIENT_CONDITION="WOW_PROJECT_CAMELOT and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT"
         ;;
     *)
-        fail "Unknown client: $CLIENT (expected retail or forever)."
+        fail "Unknown client: $CLIENT (expected all, retail or forever)."
         ;;
 esac
 
@@ -157,13 +177,13 @@ function fetch_client() {
     get "$DATA_BASE_URL/$CLIENT/dynamic/index.json" > "$version_file"
 
     jq -e '(.mountsrarity | type) == "string" and (.mountsrarity | length) > 0' "$version_file" > /dev/null \
-        || fail "Unexpected version response: 'mountsrarity' is missing or not a non-empty string."
+        || fail "[$CLIENT] Unexpected version response: 'mountsrarity' is missing or not a non-empty string."
 
     # Retail data at the wrong path must not reach this client: its mount IDs are partly the same.
     # Thus, the other clients also download their mount catalog to compare the IDs.
     if [[ "$CLIENT" != "retail" ]]; then
         jq -e '(.mounts | type) == "string" and (.mounts | length) > 0' "$version_file" > /dev/null \
-            || fail "Unexpected version response: 'mounts' is missing or not a non-empty string."
+            || fail "[$CLIENT] Unexpected version response: 'mounts' is missing or not a non-empty string."
     fi
 
     # The two downloads do not depend on each other, so they run at the same time.
@@ -185,11 +205,11 @@ function fetch_client() {
     fi
 
     jq -e '(.mounts | type) == "object"' "$response_file" > /dev/null \
-        || fail "Unexpected mountsrarity response: 'mounts' is missing or not an object."
+        || fail "[$CLIENT] Unexpected mountsrarity response: 'mounts' is missing or not an object."
 
     jq '.mounts | to_entries' "$response_file" > "$mountsrarity_file"
 
-    step "Validating downloaded data..."
+    step "[$CLIENT] Validating downloaded data..."
     invalid_entries=$(jq -c '
         [.[] | select(
             (.key | test("^[0-9]+$") | not)
@@ -200,20 +220,20 @@ function fetch_client() {
     ' "$mountsrarity_file")
     invalid_count=$(echo "$invalid_entries" | jq 'length')
     if [[ "$invalid_count" -gt 0 ]]; then
-        log_error "Invalid entries:"
+        log_error "[$CLIENT] Invalid entries:"
         echo "$invalid_entries" | jq -c '.[]' >&2
-        fail "Refusing to update: found $invalid_count invalid mount entries above (mount ID must be an integer, rarity must be a number between 0 and 100)."
+        fail "[$CLIENT] Refusing to update: found $invalid_count invalid mount entries above (mount ID must be an integer, rarity must be a number between 0 and 100)."
     fi
 
     if [[ "$CLIENT" != "retail" ]]; then
         jq -e '(.mounts | type) == "array" and (.mounts | length) > 0' "$catalog_file" > /dev/null \
-            || fail "Unexpected mounts response: 'mounts' is missing or not a non-empty array."
+            || fail "[$CLIENT] Unexpected mounts response: 'mounts' is missing or not a non-empty array."
 
         unknown_ids=$(comm -23 \
             <(jq -r '.[].key' "$mountsrarity_file" | LC_ALL=C sort -u) \
             <(jq -r '.mounts[].id' "$catalog_file" | LC_ALL=C sort -u))
         if [[ -n "$unknown_ids" ]]; then
-            fail "Refusing to update: these mount IDs are not in the $CLIENT mount catalog: $(echo "$unknown_ids" | tr '\n' ' ')"
+            fail "[$CLIENT] Refusing to update: these mount IDs are not in the $CLIENT mount catalog: $(echo "$unknown_ids" | tr '\n' ' ')"
         fi
     fi
 
@@ -233,12 +253,12 @@ function apply_client() {
 
     new_count=$(jq 'length' "$mountsrarity_file")
     previous_count=$(data_block "$MOUNTS_FILE" | grep -cE '^[[:space:]]*\[[0-9]+\] = ' || true)
-    log "Downloaded $new_count mounts (previously $previous_count)."
+    log "[$CLIENT] Downloaded $new_count mounts (previously $previous_count)."
 
     if [[ "$previous_count" -gt 0 ]]; then
         min_allowed_count=$((previous_count * MIN_COUNT_RATIO / 100))
         if ((new_count < min_allowed_count)); then
-            fail "Refusing to update: new mount count ($new_count) is more than $((100 - MIN_COUNT_RATIO))% lower than the previous count ($previous_count). This likely indicates a broken or partial upstream response."
+            fail "[$CLIENT] Refusing to update: new mount count ($new_count) is more than $((100 - MIN_COUNT_RATIO))% lower than the previous count ($previous_count). This likely indicates a broken or partial upstream response."
         fi
     fi
 
@@ -264,7 +284,7 @@ function apply_client() {
         !skip { print }
     ' "$MOUNTS_FILE" > "$tmp_mounts_file"
 
-    step "Validating generated Lua syntax..."
+    step "[$CLIENT] Validating generated Lua syntax..."
     luac_bin=""
     for candidate in luac5.1 luac5.3 luac5.4 luac; do
         if command -v "$candidate" > /dev/null 2>&1; then
@@ -281,11 +301,11 @@ function apply_client() {
     done
 
     if [[ -n "$luac_bin" ]]; then
-        "$luac_bin" -p "$tmp_mounts_file" || fail "Refusing to update: $MOUNTS_FILE failed Lua syntax validation."
+        "$luac_bin" -p "$tmp_mounts_file" || fail "[$CLIENT] Refusing to update: $MOUNTS_FILE failed Lua syntax validation."
     elif [[ -n "$lua_bin" ]]; then
-        "$lua_bin" -e "assert(loadfile('$tmp_mounts_file'))" || fail "Refusing to update: $MOUNTS_FILE failed Lua syntax validation."
+        "$lua_bin" -e "assert(loadfile('$tmp_mounts_file'))" || fail "[$CLIENT] Refusing to update: $MOUNTS_FILE failed Lua syntax validation."
     else
-        fail "Refusing to update: no Lua interpreter (luac/lua, any version) available to validate the generated $MOUNTS_FILE."
+        fail "[$CLIENT] Refusing to update: no Lua interpreter (luac/lua, any version) available to validate the generated $MOUNTS_FILE."
     fi
 
     # Only the data decides if the file changes. A new timestamp alone must not create a release.

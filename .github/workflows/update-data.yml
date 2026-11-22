@@ -6,9 +6,12 @@ on:
     # dataforazeroth.com publishes new rarity data before 00:45 UTC on Thursday and Sunday.
     - cron: '47 2 * * 0,4'
 
+permissions:
+  contents: read
+
 jobs:
-  update_mountrarities:
-    name: Update Data.lua
+  update_data:
+    name: Update rarity data
     runs-on: ubuntu-latest
 
     steps:
@@ -29,19 +32,20 @@ jobs:
       - name: Update rarities
         run: ./scripts/update-rarities.sh
 
-      - name: Verify Data.lua was updated
+      - name: Verify MountsRarity.lua was updated
         id: verify-changes
         uses: tj-actions/verify-changed-files@v20
         with:
           files: |
             MountsRarity.lua
 
-      - name: Commit version change
+      - name: Commit rarity data change
         if: steps.verify-changes.outputs.files_changed == 'true'
         id: commit
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore(data): update rarity data"
+          file_pattern: MountsRarity.lua
 
       - name: Define release tag
         if: steps.commit.outputs.changes_detected == 'true'
